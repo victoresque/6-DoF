@@ -48,3 +48,31 @@ def lookAt(src, dst):
     worldToCam = np.linalg.inv(camToWorld)
 
     return worldToCam[:3, :3], worldToCam[:3, 3:4]
+
+def myViews(view_count):
+    views = []
+    viewpoints = [[1, 0, 0.25],
+                  [0, 1, 0.25],
+                  [-1, 0, 0.25],
+                  [0, -1, 0.25],
+                  [1, 1, 0.25],
+                  [1, -1, 0.25],
+                  [-1, 1, 0.25],
+                  [-1, -1, 0.25],
+                  [0.1, 0, 1]]
+    for vp in viewpoints:
+        vp = normalize([vp]).flatten()
+        R, t = lookAt(np.array(vp) * 400, [0, 0, 0])
+        views.append({'R': R, 't': t})
+    return views
+
+def Rot2Angle(R):
+    return np.arctan2(R[2][1], R[2][2]), \
+           np.arctan2(-R[2][0], np.sqrt(R[2][1]**2 + R[2][2]**2)), \
+           np.arctan2(R[1][0], R[0][0])
+
+def Angle2Rot(rx, ry, rz):
+    X = [[1, 0, 0], [0, np.cos(rx), -np.sin(rx)], [0, np.sin(rx), np.cos(rx)]]
+    Y = [[np.cos(ry), 0, np.sin(ry)], [0, 1, 0], [-np.sin(ry), 0, np.cos(ry)]]
+    Z = [[np.cos(rz), -np.sin(rz), 0], [np.sin(rz), np.cos(rz), 0], [0, 0, 1]]
+    return np.matmul(Z, np.matmul(Y, X))
