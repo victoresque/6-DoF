@@ -201,7 +201,7 @@ def _compute_calib_proj(K, x0, y0, w, h, nc, fc, window_coords='y_down'):
 
 #-------------------------------------------------------------------------------
 def draw_color(shape, vertex_buffer, index_buffer, texture, mat_model, mat_view,
-               mat_proj, ambient_weight, bg_color, shading):
+               mat_proj, ambient_weight, bg_color, shading, light_src=[0, 0, 0]):
 
     # Set shader for the selected shading
     if shading == 'flat':
@@ -211,7 +211,7 @@ def draw_color(shape, vertex_buffer, index_buffer, texture, mat_model, mat_view,
 
     program = gloo.Program(_color_vertex_code, color_fragment_code)
     program.bind(vertex_buffer)
-    program['u_light_eye_pos'] = [0, 0, 0] # Camera origin
+    program['u_light_eye_pos'] = light_src
     program['u_light_ambient_w'] = ambient_weight
     program['u_mv'] = _compute_model_view(mat_model, mat_view)
     program['u_nm'] = _compute_normal_matrix(mat_model, mat_view)
@@ -303,9 +303,9 @@ def draw_depth(shape, vertex_buffer, index_buffer, mat_model, mat_view, mat_proj
     return depth
 
 #-------------------------------------------------------------------------------
-def render(model, im_size, K, R, t, clip_near=100, clip_far=2000,
+def render(model, im_size, K, R, t, clip_near=50, clip_far=2000,
            texture=None, surf_color=None, bg_color=(0.0, 0.0, 0.0, 0.0),
-           ambient_weight=0.5, shading='flat', mode='rgb+depth'):
+           ambient_weight=0.5, shading='flat', mode='rgb+depth', light_src=[0, 0, 0]):
 
     # Process input data
     #---------------------------------------------------------------------------
@@ -395,7 +395,7 @@ def render(model, im_size, K, R, t, clip_near=100, clip_far=2000,
             # Render color image
             global rgb
             rgb = draw_color(shape, vertex_buffer, index_buffer, texture, mat_model,
-                             mat_view, mat_proj, ambient_weight, bg_color, shading)
+                             mat_view, mat_proj, ambient_weight, bg_color, shading, light_src=light_src)
         if render_depth:
             # Render depth image
             global depth

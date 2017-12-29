@@ -20,7 +20,6 @@ def RT2to4x4(R, t):
     np.copyto(pose[0:3, 3:4], t)
     return pose
 
-
 def lookAt(src, dst):
     src = np.array(src)
     dst = np.array(dst)
@@ -49,22 +48,34 @@ def lookAt(src, dst):
 
     return worldToCam[:3, :3], worldToCam[:3, 3:4]
 
-def myViews(view_count):
-    views = []
-    viewpoints = [[1, 0, 0.25],
-                  [0, 1, 0.25],
-                  [-1, 0, 0.25],
-                  [0, -1, 0.25],
-                  [1, 1, 0.25],
-                  [1, -1, 0.25],
-                  [-1, 1, 0.25],
-                  [-1, -1, 0.25],
-                  [0.1, 0, 1]]
-    for vp in viewpoints:
-        vp = normalize([vp]).flatten()
-        R, t = lookAt(np.array(vp) * 400, [0, 0, 0])
-        views.append({'R': R, 't': t})
-    return views
+def getRandomView(radius):
+    u = np.random.rand()
+    v = np.random.rand()
+    x = np.sqrt(1 - np.square(u)) * np.cos(v * 2 * np.pi) * radius
+    y = np.sqrt(1 - np.square(u)) * np.sin(v * 2 * np.pi) * radius
+    z = u * radius
+    R, t = lookAt([x, y, z], [0, 0, 0])
+    return {'R': R, 't': t, 'u': u, 'v': v}
+
+def uv2Rt(u, v, radius):
+    x = np.sqrt(1 - np.square(u)) * np.cos(v * 2 * np.pi) * radius
+    y = np.sqrt(1 - np.square(u)) * np.sin(v * 2 * np.pi) * radius
+    z = u * radius
+    R, t = lookAt([x, y, z], [0, 0, 0])
+    return R, t
+
+def uv2ab(u, v):
+    x = np.sqrt(1 - np.square(u)) * np.cos(v * 2 * np.pi)
+    y = np.sqrt(1 - np.square(u)) * np.sin(v * 2 * np.pi)
+    z = u
+    a = v
+    b = np.arctan(z / np.sqrt(x**2 + y**2))
+    return a, b
+
+def ab2uv(a, b):
+    u = np.sin(b)
+    v = a
+    return u, v
 
 def Rot2Angle(R):
     return np.arctan2(R[2][1], R[2][2]), \
@@ -76,3 +87,6 @@ def Angle2Rot(rx, ry, rz):
     Y = [[np.cos(ry), 0, np.sin(ry)], [0, 1, 0], [-np.sin(ry), 0, np.cos(ry)]]
     Z = [[np.cos(rz), -np.sin(rz), 0], [np.sin(rz), np.cos(rz), 0], [0, 0, 1]]
     return np.matmul(Z, np.matmul(Y, X))
+
+
+

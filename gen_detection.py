@@ -17,7 +17,7 @@ dp = get_dataset_params('hinterstoisser')
 
 voc_base = '/home/victorhuang/Desktop/pose/datasets/VOC2012/JPEGImages/'
 bg = []
-bg_name = os.listdir(voc_base)
+bg_name = sorted(os.listdir(voc_base))
 np.random.shuffle(bg_name)
 
 view_count = 1024
