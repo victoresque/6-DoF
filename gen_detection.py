@@ -10,7 +10,7 @@ from sixd.params.dataset_params import get_dataset_params
 from sixd.pysixd import renderer
 from sixd.pysixd.inout import load_ply, load_info, load_gt
 from sixd.pysixd.view_sampler import sample_views
-from myutils.render import draw_BB, get_BB
+from myutils.transform import draw_BB, get_BB
 
 dataset_path = '/home/victorhuang/Desktop/pose/datasets/hinterstoisser/'
 dp = get_dataset_params('hinterstoisser')

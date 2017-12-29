@@ -48,20 +48,30 @@ def lookAt(src, dst):
 
     return worldToCam[:3, :3], worldToCam[:3, 3:4]
 
-def getRandomView(radius):
+def getRandomView(radius, inplane_range=np.pi/2):
     u = np.random.rand()
     v = np.random.rand()
+    w = np.random.uniform(-inplane_range * (1 - np.sqrt(u)), inplane_range * (1 - np.sqrt(u)))
     x = np.sqrt(1 - np.square(u)) * np.cos(v * 2 * np.pi) * radius
     y = np.sqrt(1 - np.square(u)) * np.sin(v * 2 * np.pi) * radius
     z = u * radius
     R, t = lookAt([x, y, z], [0, 0, 0])
-    return {'R': R, 't': t, 'u': u, 'v': v}
+    R = np.matmul(np.array([[np.cos(w), -np.sin(w), 0],
+                            [np.sin(w), np.cos(w), 0],
+                            [0, 0, 1]]), R)
+    a = v * 2 * np.pi
+    b = np.arctan(z / np.sqrt(x ** 2 + y ** 2))
+    c = w
+    return {'R': R, 't': t, 'a': a, 'b': b, 'c': c}
 
-def uv2Rt(u, v, radius):
-    x = np.sqrt(1 - np.square(u)) * np.cos(v * 2 * np.pi) * radius
-    y = np.sqrt(1 - np.square(u)) * np.sin(v * 2 * np.pi) * radius
-    z = u * radius
+def abc2Rt(a, b, c, radius):
+    x = np.cos(b) * np.cos(a) * radius
+    y = np.cos(b) * np.sin(a) * radius
+    z = np.sin(b) * radius
     R, t = lookAt([x, y, z], [0, 0, 0])
+    R = np.matmul(np.array([[np.cos(c), -np.sin(c), 0],
+                            [np.sin(c), np.cos(c), 0],
+                            [0, 0, 1]]), R)
     return R, t
 
 def uv2ab(u, v):
