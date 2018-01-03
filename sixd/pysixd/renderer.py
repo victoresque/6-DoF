@@ -6,9 +6,6 @@
 import numpy as np
 from glumpy import app, gloo, gl
 
-# Set backend (http://glumpy.readthedocs.io/en/latest/api/app-backends.html)
-# app.use('sdl2')
-
 # Set logging level
 from glumpy.log import log
 import logging

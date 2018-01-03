@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+from tqdm import tqdm
 from sklearn.preprocessing import normalize
 
 def draw_BB(image, l, t, r, b):
@@ -48,10 +49,28 @@ def lookAt(src, dst):
 
     return worldToCam[:3, :3], worldToCam[:3, 3:4]
 
-def getRandomView(radius, inplane_range=np.pi/2):
+def getRandomView(radius):
+    theta = np.random.uniform(-np.pi, np.pi)
+    u = np.random.uniform(-1, 1)
+    v = np.random.uniform(-1, 1)
+    x = np.sqrt(1 - np.square(u)) * np.cos(v * np.pi)
+    y = np.sqrt(1 - np.square(u)) * np.sin(v * np.pi)
+    z = u
+    rvec = np.array([x, y, z])
+    rvec = rvec / np.linalg.norm(rvec) * theta
+    R = cv2.Rodrigues(rvec)[0]
+    t = np.array([0, 0, radius])
+    if R[2][2] > 0:
+        return getRandomView(radius)
+    else:
+        return {'R': R, 't': t, 'rvec': rvec.tolist()}
+
+def getRandomView1(radius, inplane_range=np.pi/2):
+    # Uniformly sampled on a sphere
     u = np.random.rand()
     v = np.random.rand()
-    w = np.random.uniform(-inplane_range * (1 - np.sqrt(u)), inplane_range * (1 - np.sqrt(u)))
+    w = np.random.uniform(-inplane_range * np.sqrt(1 - u),
+                           inplane_range * np.sqrt(1 - u))
     x = np.sqrt(1 - np.square(u)) * np.cos(v * 2 * np.pi) * radius
     y = np.sqrt(1 - np.square(u)) * np.sin(v * 2 * np.pi) * radius
     z = u * radius
@@ -63,6 +82,26 @@ def getRandomView(radius, inplane_range=np.pi/2):
     b = np.arctan(z / np.sqrt(x ** 2 + y ** 2))
     c = w
     return {'R': R, 't': t, 'a': a, 'b': b, 'c': c}
+
+def getRandomView2(radius, inplane_range=np.pi/2):
+    a = np.random.rand() * 2 * np.pi
+    b = np.random.rand() * np.pi / 2
+    c = np.random.uniform(-inplane_range * (1 - b / (np.pi / 2)),
+                           inplane_range * (1 - b / (np.pi / 2)))
+    x = np.cos(b) * np.cos(a) * radius
+    y = np.cos(b) * np.sin(a) * radius
+    z = np.sin(b) * radius
+    R, t = lookAt([x, y, z], [0, 0, 0])
+    R = np.matmul(np.array([[np.cos(c), -np.sin(c), 0],
+                            [np.sin(c), np.cos(c), 0],
+                            [0, 0, 1]]), R)
+    return {'R': R, 't': t, 'a': a, 'b': b, 'c': c}
+
+def getRandomViews(view_count, view_radius):
+    views = []
+    for i in tqdm(range(view_count), 'Generating random views: '):
+        views.append(getRandomView(view_radius))
+    return views
 
 def abc2Rt(a, b, c, radius):
     x = np.cos(b) * np.cos(a) * radius
@@ -87,12 +126,12 @@ def ab2uv(a, b):
     v = a
     return u, v
 
-def Rot2Angle(R):
+def rot2Angle(R):
     return np.arctan2(R[2][1], R[2][2]), \
            np.arctan2(-R[2][0], np.sqrt(R[2][1]**2 + R[2][2]**2)), \
            np.arctan2(R[1][0], R[0][0])
 
-def Angle2Rot(rx, ry, rz):
+def angle2Rot(rx, ry, rz):
     X = [[1, 0, 0], [0, np.cos(rx), -np.sin(rx)], [0, np.sin(rx), np.cos(rx)]]
     Y = [[np.cos(ry), 0, np.sin(ry)], [0, 1, 0], [-np.sin(ry), 0, np.cos(ry)]]
     Z = [[np.cos(rz), -np.sin(rz), 0], [np.sin(rz), np.cos(rz), 0], [0, 0, 1]]
