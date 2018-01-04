@@ -27,20 +27,32 @@ for filename in tqdm(nobg_name):
     seg.append(image)
 
 seq_affine = iaa.Sequential([
-    iaa.Affine(scale=(0.9, 1.1),
-               translate_percent=(-0.025, 0.025),
-               rotate=(-1, 1),
+    iaa.Affine(translate_percent=(-0.1, 0.1),
+               scale=(0.9, 1.1),
+               rotate=(-2, 2),
                shear=(-2, 2),
                mode='edge')
 ])
 seq_color = iaa.Sequential([
-    iaa.GaussianBlur(sigma=(0, 0.5)),
-    iaa.Add((-5, 5), per_channel=0.2),
-    iaa.Add((-32, 32)),
-    iaa.Multiply((0.95, 1.05), per_channel=0.2),
-    iaa.Multiply((0.9, 1.1)),
+    #iaa.OneOf([
+    #    iaa.GaussianBlur(sigma=(0, 1.0)),
+    #    iaa.Sequential([
+    #        iaa.ElasticTransformation(alpha=(0, 1.0), sigma=0.1),
+    #        iaa.Affine(scale=(1.05, 1.05))
+    #    ])
+    #]),
+    iaa.GaussianBlur(sigma=(1.25, 1.75)),
+    # iaa.Add((-5, 5), per_channel=0.2),
+    iaa.Add((8, 32)),
+    iaa.Multiply((0.95, 1.05), per_channel=0.25),
+    # iaa.Multiply((0.9, 1.1)),
     iaa.ContrastNormalization((0.9, 1.1))
 ])
+seq = iaa.Sequential([
+    seq_affine,
+    seq_color
+])
+# seq.show_grid(cv2.cvtColor(images[4], cv2.COLOR_RGB2BGR), 8, 8)
 
 x_train = np.array(images)
 x_train = x_train.astype(np.float32) / 255
@@ -66,9 +78,8 @@ from keras.utils.vis_utils import plot_model
 plot_model(model, 'model.png')
 
 opt = keras.optimizers.adam(decay=0.02)
-model.compile(loss='binary_crossentropy',
-              optimizer=opt,
-              metrics=['accuracy'])
+model.compile(loss='mse',
+              optimizer=opt)
 
 from keras.callbacks import ModelCheckpoint
 callbacks = [ModelCheckpoint('ori_{epoch:03d}_{loss:.4f}_{val_loss:.4f}.h5', period=5)]
@@ -94,7 +105,7 @@ class DataGenerator(object):
             # seq_color_det = seq_color.to_deterministic()
             x_batch[i] = seq_affine_det.augment_image(seq_color.augment_image(x[ID]))
             y_batch[i] = seq_affine_det.augment_image(y[ID])
-        return x_batch, y_batch
+        return x_batch, x_batch
 
 batch_size = 64
 datagen = DataGenerator(batch_size=batch_size)

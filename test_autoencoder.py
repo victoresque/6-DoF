@@ -31,10 +31,10 @@ images = np.array(images).astype('float32') / 255
 
 from model_autoencoder import get_model
 model = get_model(images.shape[1:])
-model.load_weights('ori_004_0.5589_0.5640.h5')
+model.load_weights('ori_109_0.0419_0.0383.h5')
 
 images = model.predict(images).squeeze()
 for i, image in enumerate(images):
     cv2.imshow('Input', images0[i])
-    cv2.imshow('Nobg', image)
+    cv2.imshow('Output', image)
     cv2.waitKey()

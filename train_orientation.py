@@ -8,7 +8,7 @@ from tqdm import tqdm
 from myutils.transform import rot2Angle
 
 model_id = 6
-img_count = 10000
+img_count = 50000
 synth_base = '/home/victorhuang/Desktop/pose/algorithms/synthetic/orientation/'
 img_base = synth_base + 'img/{:02d}/'.format(model_id)
 img_name = sorted(os.listdir(img_base))[:img_count]
@@ -20,8 +20,9 @@ views = []
 Rs = []
 for filename in tqdm(img_name):
     image = cv2.imread(img_base + filename)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    image = cv2.resize(image, (48, 48))
+    image = cv2.GaussianBlur(image, (9, 9), 0)
+    # cv2.imshow('', image)
+    # cv2.waitKey()
     images.append(image)
 for filename in tqdm(view_name):
     with open(view_base + filename, 'r') as f:
@@ -29,20 +30,26 @@ for filename in tqdm(view_name):
         R = view['R']
         Rs.append(R)
         rx, ry, rz = rot2Angle(R)
-        views.append([rx, ry, rz])
+        views.append([rx / 2 / np.pi,
+                      ry / 2 / np.pi,
+                      rz / 2 / np.pi])
 
-seq = iaa.Sequential([
-    iaa.Affine(scale=(0.9, 1.1),
-               translate_percent=(-0.025, 0.025),
-               rotate=(-1, 1),
+seq_affine = iaa.Sequential([
+    iaa.Affine(translate_percent=(-0.1, 0.1),
+               scale=(0.9, 1.1),
+               rotate=(-2, 2),
                shear=(-2, 2),
-               mode='edge'),
-    iaa.GaussianBlur(sigma=(0, 0.5)),
-    iaa.Add((-5, 5), per_channel=0.2),
-    iaa.Add((-32, 32)),
-    iaa.Multiply((0.95, 1.05), per_channel=0.2),
-    iaa.Multiply((0.9, 1.1)),
+               mode='edge')
+])
+seq_color = iaa.Sequential([
+    iaa.GaussianBlur(sigma=(1.25, 1.75)),
+    iaa.Add((8, 32)),
+    iaa.Multiply((0.95, 1.05), per_channel=0.25),
     iaa.ContrastNormalization((0.9, 1.1))
+])
+seq = iaa.Sequential([
+    seq_affine,
+    seq_color
 ])
 # seq.show_grid(images[0], cols=8, rows=8)
 
@@ -94,12 +101,12 @@ x_train = x_train / 255
 x_test = x_test / 255
 
 def deg_diff(y_true, y_pred):
-    return my_rmse(y_true, y_pred) * 360 / 2 / np.pi
+    return my_rmse(y_true, y_pred) * 360
 
 opt = keras.optimizers.adam(decay=0.02)
 model.compile(loss=['mse'],
               optimizer=opt,
-              metrics=[deg_diff])
+              metrics={'output': deg_diff})
 
 from keras.callbacks import ModelCheckpoint
 callbacks = [ModelCheckpoint('ori_{epoch:03d}_{loss:.4f}_{val_loss:.4f}.h5', period=5)]
@@ -128,11 +135,15 @@ class DataGenerator(object):
             y1_batch[i] = y1[ID]
         return x_batch, y_batch, y1_batch
 
-batch_size = 128
+batch_size = 64
+model.fit(x_train, y_train, batch_size=batch_size,
+          validation_data=(x_test, y_test),
+          epochs=500, callbacks=callbacks)
+
 datagen = DataGenerator(batch_size=batch_size)
 valdatagen = DataGenerator(batch_size=batch_size)
 model.fit_generator(generator=datagen.flow(x_train, y_train, y1_train),
-                    steps_per_epoch=2*len(x_train)//batch_size,
+                    steps_per_epoch=len(x_train)//batch_size,
                     validation_data=valdatagen.flow(x_train, y_train, y1_train),
                     validation_steps=len(x_test)//batch_size//2,
                     epochs=500, callbacks=callbacks)
