@@ -10,7 +10,7 @@ from sixd.params.dataset_params import get_dataset_params
 from sixd.pysixd import renderer
 from sixd.pysixd.inout import load_ply, load_info, load_gt
 from sixd.pysixd.view_sampler import sample_views
-from myutils.transform import draw_BB, get_BB
+from myutils.transform import drawBoundingBox, getBoundingBox
 
 dataset_path = '/home/victorhuang/Desktop/pose/datasets/hinterstoisser/'
 dp = get_dataset_params('hinterstoisser')
@@ -67,7 +67,7 @@ for model_id in range(1, 2):
 
         gt = {'R': R.tolist(), 't': t.tolist()}
 
-        l, t, r, b = get_BB(model_img)
+        l, t, r, b = getBoundingBox(model_img)
         li, ti, ri, bi = int(l*img_width), int(t*img_height), int(r*img_width), int(b*img_height)
         # model_img = cv2.GaussianBlur(model_img, (3, 3), 0)
         # model_img = cv2.bilateralFilter(model_img, 8, 32, 32)

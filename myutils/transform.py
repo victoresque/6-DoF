@@ -2,15 +2,16 @@ import numpy as np
 import cv2
 from tqdm import tqdm
 from sklearn.preprocessing import normalize
+from sixd.pysixd.view_sampler import fibonacci_sampling
 
-def draw_BB(image, l, t, r, b):
+def drawBoundingBox(image, l, t, r, b):
     out = np.copy(image)
     lt = (int(l * image.shape[1]), int(t * image.shape[0]))
     rb = (int(r * image.shape[1]), int(b * image.shape[0]))
     cv2.rectangle(out, lt, rb, (0, 255, 0), 2)
     return out
 
-def get_BB(image):
+def getBoundingBox(image):
     a = np.where(image != 0)
     return np.min(a[1])/640, np.min(a[0])/480, \
            np.max(a[1])/640, np.max(a[0])/480
@@ -49,8 +50,7 @@ def lookAt(src, dst):
 
     return worldToCam[:3, :3], worldToCam[:3, 3:4]
 
-rx, ry, rz = 0., 0., 0.
-def getView(radius):
+def rotateToUpright(radius):
     R = np.matmul(angle2Rot(0, np.pi, 0), angle2Rot(0, -np.pi / 2, np.pi / 2))
     X = [[1, 0, 0], [0, np.cos(rx), -np.sin(rx)], [0, np.sin(rx), np.cos(rx)]]
     Y = [[np.cos(ry), 0, np.sin(ry)], [0, 1, 0], [-np.sin(ry), 0, np.cos(ry)]]
@@ -107,12 +107,29 @@ def getRandomView2(radius, inplane_range=np.pi/2):
                             [0, 0, 1]]), R)
     return {'R': R, 't': t, 'a': a, 'b': b, 'c': c}
 
-def getViews(view_count, view_radius):
+def getViews(view_count, view_radius, inplane_steps, randomized=False, upper_only=True):
+    if not upper_only:
+        view_count = view_count // 2
+    viewpoints = fibonacci_sampling(n_pts=view_count + (view_count + 1 % 2), radius=view_radius)
+    viewpoints = np.array(viewpoints)
+    '''
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d', aspect='equal')
+    ax.scatter(viewpoints[:, 0], viewpoints[:, 1], viewpoints[:, 2])
+    plt.show()
+    '''
     views = []
-    global rx, ry, rz
-    rx, ry, rz = np.pi * 0.1, np.pi * 0.7, 0.
-    for i in tqdm(range(view_count), 'Generating views: '):
-        views.append(getView(view_radius))
+    for i, vp in tqdm(enumerate(viewpoints), 'Generating views: '):
+        if vp[2] > -0.2 * view_radius:
+            R, t = lookAt(vp, [0, 0, 0])
+            for i in range(inplane_steps):
+                rz = i * (np.pi * 2 / inplane_steps)
+                if randomized:
+                    rz = rz + np.random.uniform(-np.pi / inplane_steps, np.pi / inplane_steps)
+                R_ = np.matmul([[np.cos(rz), -np.sin(rz), 0], [np.sin(rz), np.cos(rz), 0], [0, 0, 1]], R)
+                views.append({'R': R_, 't': t, 'vp': vp, 'rz': rz})
     return views
 
 def getRandomViews(view_count, view_radius):

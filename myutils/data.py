@@ -16,10 +16,18 @@ def getBackgrounds(bg_count):
         bg.append(cv2.imread(bg_base + filename))
     return bg
 
-def get_model(id, render_scale):
+def getModel(id):
     dp = get_dataset_params('hinterstoisser')
     model = load_ply(dp['model_mpath'].format(id))
+    return model
+
+def getIntrinsic(id, render_scale):
+    dp = get_dataset_params('hinterstoisser')
     scene_info = load_info(dp['scene_info_mpath'].format(id))
     K = scene_info[0]['cam_K'] * render_scale
     K[2][2] = 1.
-    return model, K
+    return K
+
+def ensureDir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
