@@ -25,15 +25,15 @@ for i in tqdm(range(img_count)):
     image = cv2.imread(img_path)
     image = image[bb[1]:bb[1]+bb[3], bb[0]:bb[0]+bb[2]]
     images0.append(cv2.resize(image, (200, int(200 * image.shape[0]/image.shape[1]))))
-    image = cv2.resize(image, (48, 48))
+    image = cv2.resize(image, (96, 96))
     images.append(image)
 
 images = np.array(images).astype('float32')
 images /= 255
 
-import model_orientation
-model = model_orientation.get_model(images.shape[1:])
-model.load_weights('ori_004_0.0140_0.0139.h5')
+import orientation_model0
+model = orientation_model0.get_model(images.shape[1:])
+model.load_weights('ori_019_0.0285_0.0272.h5')
 
 y = model.predict(images)
 print(y)

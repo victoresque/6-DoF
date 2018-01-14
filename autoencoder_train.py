@@ -70,7 +70,7 @@ import keras.backend as K
 from keras.utils import to_categorical
 from keras.metrics import top_k_categorical_accuracy
 from keras.preprocessing.image import ImageDataGenerator
-from model_autoencoder import get_model
+from autoencoder_model import get_model
 
 model = get_model(x_train.shape[1:])
 model.summary()

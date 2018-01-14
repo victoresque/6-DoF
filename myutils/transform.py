@@ -49,6 +49,16 @@ def lookAt(src, dst):
 
     return worldToCam[:3, :3], worldToCam[:3, 3:4]
 
+rx, ry, rz = 0., 0., 0.
+def getView(radius):
+    R = np.matmul(angle2Rot(0, np.pi, 0), angle2Rot(0, -np.pi / 2, np.pi / 2))
+    X = [[1, 0, 0], [0, np.cos(rx), -np.sin(rx)], [0, np.sin(rx), np.cos(rx)]]
+    Y = [[np.cos(ry), 0, np.sin(ry)], [0, 1, 0], [-np.sin(ry), 0, np.cos(ry)]]
+    Z = [[np.cos(rz), -np.sin(rz), 0], [np.sin(rz), np.cos(rz), 0], [0, 0, 1]]
+    R = np.matmul(X, np.matmul(Y, R))
+    t = np.array([0, 0, radius])
+    return {'R': R, 't': t}
+
 def getRandomView(radius):
     theta = np.random.uniform(-np.pi, np.pi)
     u = np.random.uniform(-1, 1)
@@ -96,6 +106,14 @@ def getRandomView2(radius, inplane_range=np.pi/2):
                             [np.sin(c), np.cos(c), 0],
                             [0, 0, 1]]), R)
     return {'R': R, 't': t, 'a': a, 'b': b, 'c': c}
+
+def getViews(view_count, view_radius):
+    views = []
+    global rx, ry, rz
+    rx, ry, rz = np.pi * 0.1, np.pi * 0.7, 0.
+    for i in tqdm(range(view_count), 'Generating views: '):
+        views.append(getView(view_radius))
+    return views
 
 def getRandomViews(view_count, view_radius):
     views = []

@@ -53,13 +53,18 @@ seq = iaa.Sequential([
 ])
 # seq.show_grid(images[0], cols=8, rows=8)
 
+import tensorflow as tf
+config = tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = 0.75
+config.gpu_options.allow_growth = True
+session = tf.Session(config=config)
 import keras
 import keras.backend as K
 from keras.utils import to_categorical
 from keras.metrics import top_k_categorical_accuracy
 from keras.preprocessing.image import ImageDataGenerator
-import model_orientation
-from model_orientation import my_mse, my_rmse
+import orientation_model0
+from orientation_model0 import my_mse, my_rmse
 
 x_train = np.array(images)
 y_train = np.array(views)
@@ -90,7 +95,7 @@ x_train = x_train[test_split:]
 y_train = y_train[test_split:]
 y1_train = y1[test_split:]
 
-model = model_orientation.get_model(x_train.shape[1:])
+model = orientation_model0.get_model(x_train.shape[1:])
 model.summary()
 from keras.utils.vis_utils import plot_model
 plot_model(model, 'model.png')
@@ -107,6 +112,8 @@ opt = keras.optimizers.adam(decay=0.02)
 model.compile(loss=['mse'],
               optimizer=opt,
               metrics={'output': deg_diff})
+
+from keras.models import load_model
 
 from keras.callbacks import ModelCheckpoint
 callbacks = [ModelCheckpoint('ori_{epoch:03d}_{loss:.4f}_{val_loss:.4f}.h5', period=5)]
@@ -126,7 +133,7 @@ class DataGenerator(object):
                 yield x_batch, [y_batch]
 
     def __data_generation(self, x, y, y1, list_IDs_temp):
-        x_batch = np.empty((self.batch_size, 48, 48, 3))
+        x_batch = np.empty((self.batch_size, 96, 96, 3))
         y_batch = np.empty((self.batch_size, 3), dtype=np.float32)
         y1_batch = np.empty((self.batch_size, 9), dtype=np.float32)
         for i, ID in enumerate(list_IDs_temp):
@@ -136,6 +143,7 @@ class DataGenerator(object):
         return x_batch, y_batch, y1_batch
 
 batch_size = 64
+
 model.fit(x_train, y_train, batch_size=batch_size,
           validation_data=(x_test, y_test),
           epochs=500, callbacks=callbacks)

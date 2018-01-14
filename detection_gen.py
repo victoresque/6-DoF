@@ -33,7 +33,7 @@ for filename in tqdm(bg_name):
     bg.append(cv2.imread(voc_base + filename))
 for model_id in range(1, 2):
     if model_id == 3 or model_id == 7:
-        # skip obj_03(bowl) and obj_07(mug)
+        # skip obj_03(bowl) and obj_07(mug) as in most research papers
         continue
     model = load_ply(dp['model_mpath'].format(model_id))
     scene_info = load_info(dp['scene_info_mpath'].format(model_id))
@@ -62,8 +62,8 @@ for model_id in range(1, 2):
         model_img = cv2.resize(model_img, (img_width, img_height), interpolation=cv2.INTER_LINEAR)
         model_img = cv2.cvtColor(model_img, cv2.COLOR_BGR2RGB)
 
-        # cv2.imshow('Model image', model_img)
-        # cv2.waitKey()
+        cv2.imshow('Model image', model_img)
+        cv2.waitKey()
 
         gt = {'R': R.tolist(), 't': t.tolist()}
 

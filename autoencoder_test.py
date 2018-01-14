@@ -29,7 +29,7 @@ for i in tqdm(range(img_count)):
 
 images = np.array(images).astype('float32') / 255
 
-from model_autoencoder import get_model
+from autoencoder_model import get_model
 model = get_model(images.shape[1:])
 model.load_weights('ori_109_0.0419_0.0383.h5')
 
