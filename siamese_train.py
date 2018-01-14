@@ -7,7 +7,9 @@ import cv2
 from torch.autograd import Variable
 from sklearn.neighbors import KNeighborsClassifier
 from tqdm import tqdm
+from sixd.pysixd import renderer
 from params import *
+from myutils.transform import lookAt
 
 model_id = 6
 pivot_base = synth_base + 'orientation/pivot/{:02d}/'.format(model_id)
@@ -35,21 +37,44 @@ for gt in pivot_gt:
         pivot_vp.append(gt['vp'])
         pivot_vp_id.append(len(pivot_vp))
 for gt in pivot_gt:
-    if len(pivot_rz) == 0 or gt['rz'] != pivot_rz[0]:
-        pivot_rz.append(gt['rz'])
+    if len(pivot_rz) == 0 or gt['rz'] != pivot_rz[0][0]:
+        pivot_rz.append([gt['rz']])
         pivot_rz_id.append(len(pivot_rz))
     else:
         break
-print(len(pivot_rz))
 
-vp_knn = KNeighborsClassifier(n_neighbors=3)
-rz_knn = KNeighborsClassifier(n_neighbors=2)
-vp_knn.fit(pivot_vp, pivot_vp_id)
-rz_knn.fit(pivot_rz, pivot_rz_id)
+knn_vp = KNeighborsClassifier(n_neighbors=3)
+knn_rz = KNeighborsClassifier(n_neighbors=2)
+knn_vp.fit(pivot_vp, pivot_vp_id)
+knn_rz.fit(pivot_rz, pivot_rz_id)
+
+n_pivot_vp = len(pivot_vp_id)
+n_pivot_rz = len(pivot_rz_id)
+
+def createPairs():
+    x0_id = []
+    x1_id = []
+    label = []
+
+    for di in tqdm(range(len(dense_img))):
+        dense_vp_id = knn_vp.kneighbors([dense_gt[di]['vp']])[1].squeeze().tolist()
+        dense_rz_id = knn_rz.kneighbors([[dense_gt[di]['rz']]])[1].squeeze().tolist()
+
+        # True
+        for pi in dense_vp_id:
+            for ri in dense_rz_id:
+                x0_id.append([pi, ri])
+                x1_id.append(di)
+                label.append(1)
+        # False
+        for pi in dense_vp_id:
+            for ri in dense_rz_id:
+                x0_id.append([pi, ri])
+                x1_id.append(di)
+                label.append(0)
+
+    return x0_id, x1_id, label
 
 
-
-
-
-
-
+a, b, c = createPairs()
+print(len(a), len(b), len(c))
