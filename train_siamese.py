@@ -131,6 +131,7 @@ for model_id in model_ids:
         for batch_id in range(n_batch):
             x0 = x0_[batch_id * batch_size: (batch_id+1) * batch_size].astype(np.float)
             x1 = x1_[batch_id * batch_size: (batch_id+1) * batch_size].astype(np.float)
+
             y = np.expand_dims(y_[batch_id * batch_size: (batch_id+1) * batch_size], 1)
 
             # Image augmentation

@@ -27,9 +27,6 @@ class SiameseNetwork(nn.Module):
             nn.Conv2d(32, 32, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.BatchNorm2d(32),
-            nn.Conv2d(32, 32, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm2d(32),
             nn.MaxPool2d(2, stride=2),
             # 16x16
             nn.Conv2d(32, 64, kernel_size=3),
@@ -38,19 +35,16 @@ class SiameseNetwork(nn.Module):
             nn.Conv2d(64, 64, kernel_size=3),
             nn.ReLU(inplace=True),
             nn.BatchNorm2d(64),
-            nn.Conv2d(64, 64, kernel_size=3),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm2d(64),
             nn.MaxPool2d(2, stride=2),
-            # 5x5
+            # 6x6
         )
 
         self.fc1 = nn.Sequential(
-            nn.Linear(64 * 5 * 5, 256),
+            nn.Linear(64 * 6 * 6, 512),
             nn.ReLU(inplace=True),
-            nn.Linear(256, 256),
+            nn.Linear(512, 512),
             nn.ReLU(inplace=True),
-            nn.Linear(256, 16)
+            nn.Linear(512, 32)
         )
 
     def forward_once(self, x):
