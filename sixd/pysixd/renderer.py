@@ -236,6 +236,10 @@ def draw_color(shape, vertex_buffer, index_buffer, texture, mat_model, mat_view,
     gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
     gl.glDisable(gl.GL_LINE_SMOOTH)
     gl.glDisable(gl.GL_POLYGON_SMOOTH)
+    gl.glDisable(gl.GL_MULTISAMPLE)
+
+    gl.glEnable(gl.GL_LINE_SMOOTH)
+    gl.glEnable(gl.GL_POLYGON_SMOOTH)
     gl.glEnable(gl.GL_MULTISAMPLE)
     '''
     # Keep the back-face culling disabled because of objects which do not have
@@ -248,15 +252,24 @@ def draw_color(shape, vertex_buffer, index_buffer, texture, mat_model, mat_view,
     program.draw(gl.GL_TRIANGLES, index_buffer)
 
     # Retrieve the contents of the FBO texture
+    ''' RGB
     rgb = np.zeros((shape[0], shape[1], 4), dtype=np.float32)
     gl.glReadPixels(0, 0, shape[1], shape[0], gl.GL_RGBA, gl.GL_FLOAT, rgb)
     rgb.shape = shape[0], shape[1], 4
     rgb = rgb[::-1, :]
     rgb = np.round(rgb[:, :, :3] * 255).astype(np.uint8) # Convert to [0, 255]
+    '''
+
+    rgba = np.zeros((shape[0], shape[1], 4), dtype=np.float32)
+    gl.glReadPixels(0, 0, shape[1], shape[0], gl.GL_RGBA, gl.GL_FLOAT, rgba)
+    rgba.shape = shape[0], shape[1], 4
+    rgba = rgba[::-1, :]
+    # rgba[:, :, :3] = np.round(rgba[:, :, :3] * 255).astype(np.uint8)
+    rgba = np.round(rgba * 255).astype(np.uint8)
 
     fbo.deactivate()
 
-    return rgb
+    return rgba
 
 def draw_depth(shape, vertex_buffer, index_buffer, mat_model, mat_view, mat_proj):
 

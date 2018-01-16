@@ -3,6 +3,7 @@ import cv2
 from tqdm import tqdm
 from sklearn.preprocessing import normalize
 from sixd.pysixd.view_sampler import fibonacci_sampling
+from params import *
 
 def drawBoundingBox(image, l, t, r, b):
     out = np.copy(image)
@@ -137,6 +138,13 @@ def getRandomViews(view_count, view_radius):
     for i in tqdm(range(view_count), 'Generating random views: '):
         views.append(getRandomView(view_radius))
     return views
+
+def getLights(view_count):
+    lights = []
+    for i in tqdm(range(view_count), 'Generating lights: '):
+        lights.append([np.random.uniform(-light_shift, light_shift),
+                       np.random.uniform(-light_shift, light_shift), 0])
+    return lights
 
 def abc2Rt(a, b, c, radius):
     x = np.cos(b) * np.cos(a) * radius

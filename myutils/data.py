@@ -14,6 +14,7 @@ def getBackgrounds(bg_count):
     bg_name = bg_name[:bg_count]
     for filename in tqdm(bg_name, 'Reading backgrounds'):
         bg.append(cv2.imread(bg_base + filename))
+        # bg.append(cv2.cvtColor(cv2.imread(bg_base + filename), cv2.COLOR_BGR2RGB))
     return bg
 
 def getModel(id):
@@ -21,11 +22,10 @@ def getModel(id):
     model = load_ply(dp['model_mpath'].format(id))
     return model
 
-def getIntrinsic(id, render_scale):
+def getIntrinsic(id):
     dp = get_dataset_params('hinterstoisser')
     scene_info = load_info(dp['scene_info_mpath'].format(id))
-    K = scene_info[0]['cam_K'] * render_scale
-    K[2][2] = 1.
+    K = scene_info[0]['cam_K']
     return K
 
 def ensureDir(path):
