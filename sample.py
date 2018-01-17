@@ -23,10 +23,9 @@ def randomPaste(img, backgrounds):
 def samplePatch(img_id, img, cor, dim, stride):
     patches = []
     patches_info = []
-    for i_center in range(dim // 2, img.size[0] - dim // 2, stride):
-        for j_center in range(dim // 2, img.size[1] - dim // 2, stride):
-            if not np.array_equal(cor[i_center][j_center], cor[0][0]):
-                patches.append(img.crop((j_center - dim // 2, i_center - dim // 2,
-                                         j_center + dim // 2, i_center + dim // 2)))
-                patches_info.append({'img_id': img_id, 'cor': cor[i_center][j_center].tolist()})
+    for i_center in range(dim // 2, img.shape[0] - dim // 2, stride):
+        for j_center in range(dim // 2, img.shape[1] - dim // 2, stride):
+            patches.append(img[i_center - dim // 2: i_center + dim // 2,
+                               j_center - dim // 2: j_center + dim // 2])
+            patches_info.append({'img_id': img_id, 'cor': cor[i_center][j_center].tolist()})
     return patches, patches_info

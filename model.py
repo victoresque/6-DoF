@@ -21,40 +21,22 @@ class SiameseNetwork(nn.Module):
     def __init__(self):
         super(SiameseNetwork, self).__init__()
         self.cnn1 = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=3, padding=1),
+            nn.Conv2d(3, 16, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            nn.BatchNorm2d(32),
-            nn.Conv2d(32, 32, kernel_size=3, padding=1),
+            nn.Conv2d(16, 16, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            nn.BatchNorm2d(32),
-            nn.Conv2d(32, 32, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm2d(32),
             nn.MaxPool2d(2, stride=2),
-            # 32x32
-            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            # 12x12
+            nn.Conv2d(16, 32, kernel_size=3),
             nn.ReLU(inplace=True),
-            nn.BatchNorm2d(64),
-            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.Conv2d(32, 32, kernel_size=3),
             nn.ReLU(inplace=True),
-            nn.BatchNorm2d(64),
-            nn.Conv2d(64, 64, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm2d(64),
-            nn.MaxPool2d(2, stride=2),
-            # 16x16
-            nn.Conv2d(64, 128, kernel_size=3),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm2d(128),
-            nn.Conv2d(128, 128, kernel_size=3),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm2d(128),
             nn.MaxPool2d(2, stride=2)
-            # 6x6
+            # 4x4
         )
 
         self.fc1 = nn.Sequential(
-            nn.Linear(128 * 6 * 6, 512),
+            nn.Linear(32 * 4 * 4, 512),
             nn.ReLU(inplace=True),
             nn.Linear(512, 512),
             nn.ReLU(inplace=True),

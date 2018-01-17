@@ -3,16 +3,15 @@ from imgaug import augmenters as iaa
 
 seq_affine = iaa.Sequential([
     iaa.Affine(translate_px=(-2, 2),
-               rotate=(-12, 12),
+               rotate=(-8, 8),
                scale=(0.95, 1.05),
-               shear=(-4, 4),
                mode='edge')
 ])
 
 seq_color = iaa.Sequential([
-    iaa.GaussianBlur(sigma=(1.0, 1.0)),
-    iaa.Multiply((0.5, 1.1)),
-    iaa.Multiply((0.8, 1.2), per_channel=0.4),
+    # iaa.GaussianBlur(sigma=(1.0, 1.0)),
+    iaa.Multiply((0.5, 1.5)),
+    iaa.Add((-10, 10), per_channel=1.0),
 ])
 
 seq_brighten = iaa.Sequential([

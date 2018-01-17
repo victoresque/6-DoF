@@ -14,5 +14,5 @@ pivot_inplane_steps = 8
 dense_count = 240
 dense_inplane_steps = 32
 
-patch_size = 16
+patch_size = 24
 patch_stride = 8
