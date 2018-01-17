@@ -141,9 +141,12 @@ def getRandomViews(view_count, view_radius):
 
 def getLights(view_count):
     lights = []
-    for i in tqdm(range(view_count), 'Generating lights: '):
-        lights.append([np.random.uniform(-light_shift, light_shift),
-                       np.random.uniform(-light_shift, light_shift), 0])
+    for i in range(view_count // 2):
+        lights.append([np.random.uniform(light_shift * 3 / 4, light_shift),
+                       np.random.uniform(light_shift * 3 / 4, light_shift), 0])
+    for i in range(view_count - view_count // 2):
+        lights.append([np.random.uniform(-light_shift * 3 / 4, -light_shift),
+                       np.random.uniform(light_shift * 3 / 4, light_shift), 0])
     return lights
 
 def abc2Rt(a, b, c, radius):
