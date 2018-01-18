@@ -28,8 +28,6 @@ for model_id in model_ids:
         filenames = sorted(os.listdir(path))
         for filename in tqdm(filenames, 'Reading synthetic'):
             ext = os.path.splitext(filename)[1]
-            if ext == '.npy':
-                patches.append(np.load(path + filename))
             if ext == '.png':
                 patch = np.asarray(Image.open(path + filename))
                 patches.append(cv2.cvtColor(patch, cv2.COLOR_BGR2RGB) / 255)
@@ -61,12 +59,12 @@ for model_id in model_ids:
         for i, p in enumerate(tqdm(patches)):
             x0.append(p)
             # x1.append(randomCrop(bg[np.random.randint(0, len(bg))], patch_size))
-            x1.append(patches[i-3])
+            x1.append(patches[i-8])
             label.append(0.)
         for i, p in enumerate(tqdm(patches)):
             x0.append(p)
             # x1.append(randomCrop(bg[np.random.randint(0, len(bg))], patch_size))
-            x1.append(patches[i-6])
+            x1.append(patches[i-16])
             label.append(0.)
 
         return x0, x1, label
@@ -75,7 +73,6 @@ for model_id in model_ids:
     # seq.show_grid(cv2.cvtColor(x0[12], cv2.COLOR_BGR2RGB), 8, 8)
 
     x0, x1, y = shuffle(x0, x1, y)
-
     '''
     for i in range(100):
         print(y[i])
@@ -104,8 +101,7 @@ for model_id in model_ids:
     # optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum)
 
     n_input = len(x0)
-    batch_size = 16
-
+    batch_size = 32
     def train(epoch, x0_, x1_, y_):
         print('Epoch {:02d}:'.format(epoch))
 
@@ -123,10 +119,8 @@ for model_id in model_ids:
             y = np.expand_dims(y_[batch_id * batch_size: (batch_id+1) * batch_size], 1)
 
             # Image augmentation
-            x0 = seq_affine.augment_images(x0)
-            x0[:, :, :, :3] = seq_color.augment_images(x0[:, :, :, :3])
-            x1 = seq_affine.augment_images(x1)
-            x1[:, :, :, :3] = seq_color.augment_images(x1[:, :, :, :3])
+            x0 = seq.augment_images(x0)
+            x1 = seq.augment_images(x1)
 
             x0 = np.transpose(x0, (0, 3, 1, 2))
             x1 = np.transpose(x1, (0, 3, 1, 2))

@@ -21,36 +21,26 @@ class SiameseNetwork(nn.Module):
     def __init__(self):
         super(SiameseNetwork, self).__init__()
         self.cnn1 = nn.Sequential(
-            nn.Conv2d(4, 32, kernel_size=3, padding=1),
+            nn.Conv2d(3, 16, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            nn.BatchNorm2d(32),
-            nn.Conv2d(32, 32, kernel_size=3, padding=1),
+            nn.Conv2d(16, 16, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            nn.BatchNorm2d(32),
-            nn.Conv2d(32, 32, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm2d(32),
             nn.MaxPool2d(2, stride=2),
-            # 8x8
-            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            # 12x12
+            nn.Conv2d(16, 32, kernel_size=3),
             nn.ReLU(inplace=True),
-            nn.BatchNorm2d(64),
-            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.Conv2d(32, 32, kernel_size=3),
             nn.ReLU(inplace=True),
-            nn.BatchNorm2d(64),
-            nn.Conv2d(64, 64, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm2d(64),
-            nn.MaxPool2d(2, stride=2),
+            nn.MaxPool2d(2, stride=2)
             # 4x4
         )
 
         self.fc1 = nn.Sequential(
-            nn.Linear(64 * 4 * 4, 512),
+            nn.Linear(32 * 4 * 4, 512),
             nn.ReLU(inplace=True),
             nn.Linear(512, 512),
             nn.ReLU(inplace=True),
-            nn.Linear(512, 16)
+            nn.Linear(512, 4)
         )
 
     def forward_once(self, x):
