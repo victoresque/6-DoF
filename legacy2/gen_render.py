@@ -57,8 +57,8 @@ for model_id in model_ids:
 
     pivot_base = synth_base + 'orientation/{:02d}/pivot/'.format(model_id)
     ensureDir(pivot_base)
-    views = getViews(pivot_count, view_radius, pivot_inplane_steps)
-    lights = getLights(pivot_count * pivot_inplane_steps)
+    views = getViews(view_count, view_radius, view_inplane_steps)
+    lights = getLights(view_count * view_inplane_steps)
     Parallel(n_jobs=6, verbose=1)(delayed(renderModelImage)(i, view, light, pivot_base) \
                                   for i, (view, light) in enumerate(zip(views, lights)))
 

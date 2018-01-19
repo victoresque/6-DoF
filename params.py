@@ -4,16 +4,16 @@ synth_base = '/home/victorhuang/Desktop/pose/algorithms/synthetic/'
 bg_count = 10000
 img_w = 640
 img_h = 480
-ambient_range = [0.4, 0.6]
-light_shift = 150
 
-model_ids = [9]
-view_radius = 275
-pivot_count = 20
-pivot_inplane_steps = 8
-dense_count = 240
-dense_inplane_steps = 32
+ambient_range = [0.5, 0.5]
+light_shift = 100
+render_crop_size = 300
+render_resize = 64
 
-patch_metric_size = 24
-patch_size = 16
-patch_stride = 16
+pivot_step = 2
+
+model_ids = [6]
+view_radius = 360
+view_count = 48
+view_inplane_steps = 12
+

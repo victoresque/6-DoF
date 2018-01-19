@@ -122,7 +122,7 @@ def getViews(view_count, view_radius, inplane_steps, randomized=False, upper_onl
     plt.show()
     '''
     views = []
-    for i, vp in tqdm(enumerate(viewpoints), 'Generating views: '):
+    for i, vp in enumerate(tqdm(viewpoints, 'Generating views: ')):
         if vp[2] > -0.2 * view_radius:
             R, t = lookAt(vp, [0, 0, 0])
             for i in range(inplane_steps):
@@ -140,13 +140,17 @@ def getRandomViews(view_count, view_radius):
     return views
 
 def getLights(view_count):
+    '''
+    :param view_count:
+    :return: list of lights
+
+    Assuming all lights comes from up
+    '''
     lights = []
-    for i in range(view_count // 2):
-        lights.append([np.random.uniform(light_shift * 3 / 4, light_shift),
-                       np.random.uniform(light_shift * 3 / 4, light_shift), 0])
-    for i in range(view_count - view_count // 2):
-        lights.append([np.random.uniform(-light_shift * 3 / 4, -light_shift),
-                       np.random.uniform(light_shift * 3 / 4, light_shift), 0])
+    for i in range(view_count):
+        lights.append([np.random.uniform(-light_shift, light_shift),
+                       np.random.uniform(0, light_shift),
+                       np.random.uniform(-light_shift, light_shift)])
     return lights
 
 def abc2Rt(a, b, c, radius):
