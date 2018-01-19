@@ -6,11 +6,12 @@ img_w = 640
 img_h = 480
 
 ambient_range = [0.5, 0.5]
-light_shift = 100
-render_crop_size = 300
-render_resize = 64
+light_shift = 50
+render_crop_size = 400
+render_resize = 96
 
-pivot_step = 2
+pivot_step = 3
+patch_size = 24
 
 model_ids = [6]
 view_radius = 360

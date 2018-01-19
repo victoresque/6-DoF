@@ -4,7 +4,6 @@ from PIL import Image
 from params import *
 
 def randomCrop(img, dim):
-    img = cv2.resize(img, (dim * 8, dim * 8))
     L = int(np.random.rand() * (img.shape[1] - dim))
     T = int(np.random.rand() * (img.shape[0] - dim))
     return img[T:T + dim, L:L + dim]

@@ -21,6 +21,7 @@ from sample import *
 bgs = getBackgrounds(100)
 for model_id in model_ids:
     render_base = synth_base + 'orientation/{:02d}/render/'.format(model_id)
+    patch_base = synth_base + 'orientation/{:02d}/patch/'.format(model_id)
 
     def getSyntheticData(path, with_info):
         images = []
@@ -37,17 +38,23 @@ for model_id in model_ids:
         else:
             return images
 
-    images, images_info = getSyntheticData(render_base, True)
+    # images, images_info = getSyntheticData(render_base, True)
+    images = getSyntheticData(patch_base, False)
 
     images = [cv2.cvtColor(image, cv2.COLOR_RGBA2BGRA) for image in images]
     images = np.array(images)
-
-    pivots = [[pivot[1] for pivot in image_info['pivots']] for image_info in images_info]
-    pivots = (np.array(pivots) - render_resize / 2) / render_resize
+    '''
+    for image in images:
+        cv2.imshow('', image)
+        cv2.waitKey()
+    '''
+    # pivots = [[pivot[1] for pivot in image_info['pivots']] for image_info in images_info]
+    # pivots = (np.array(pivots) - render_resize / 2) / render_resize
 
     # seq_color.show_grid(cv2.cvtColor(images[12], cv2.COLOR_BGR2RGB), 6, 6)
 
     model = ConvolutionalAutoEncoder()
+    model.load_state_dict(torch.load('models/model_epoch87.pth'))
     model.cuda()
 
     model_parameters = filter(lambda p: p.requires_grad, model.parameters())
@@ -58,7 +65,7 @@ for model_id in model_ids:
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
     n_input = len(images)
-    batch_size = 64
+    batch_size = 32
     def train(epoch, x):
         print('Epoch {:02d}:'.format(epoch))
 
@@ -106,6 +113,5 @@ for model_id in model_ids:
         return train_loss
 
     train_loss = []
-    shuffle(images, pivots)
     for epoch in range(1, 2000+1):
         train_loss.extend(train(epoch, images))

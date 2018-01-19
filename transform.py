@@ -144,8 +144,11 @@ def getRandomLights(view_count):
                        np.random.uniform(-light_shift, light_shift)])
     return lights
 
-def getPivots(xmin, xmax, ymin, ymax, zmin, zmax, step, u0, v0, resize_ratio, K, R, t):
+def getPivots(xmin, xmax, ymin, ymax, zmin, zmax, step, u0, v0, resize_ratio, K, R, t, shrink):
     pivots = []
+    xmin, xmax = xmin + shrink * (xmax - xmin) / 2, xmax - shrink * (xmax - xmin) / 2
+    ymin, ymax = ymin + shrink * (ymax - ymin) / 2, ymax - shrink * (ymax - ymin) / 2
+    zmin, zmax = zmin + shrink * (zmax - zmin) / 2, zmax - shrink * (zmax - zmin) / 2
     for i in range(step):
         for j in range(step):
             for k in range(step):
