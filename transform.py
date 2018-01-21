@@ -5,6 +5,7 @@ from sklearn.preprocessing import normalize
 from sixd.pysixd.view_sampler import fibonacci_sampling
 from params import *
 
+
 def drawBoundingBox(image, l, t, r, b):
     out = np.copy(image)
     lt = (int(l * image.shape[1]), int(t * image.shape[0]))
@@ -12,16 +13,12 @@ def drawBoundingBox(image, l, t, r, b):
     cv2.rectangle(out, lt, rb, (0, 255, 0), 2)
     return out
 
+
 def getBoundingBox(image):
     a = np.where(image != 0)
     return np.min(a[1])/640, np.min(a[0])/480, \
            np.max(a[1])/640, np.max(a[0])/480
 
-def RT2to4x4(R, t):
-    pose = np.zeros((4, 4))
-    np.copyto(pose[0:3, 0:3], R)
-    np.copyto(pose[0:3, 3:4], t)
-    return pose
 
 def lookAt(src, dst):
     src = np.array(src)
@@ -51,6 +48,7 @@ def lookAt(src, dst):
 
     return worldToCam[:3, :3], worldToCam[:3, 3:4]
 
+
 def getRandomView(radius):
     theta = np.random.uniform(-np.pi, np.pi)
     u = np.random.uniform(-1, 1)
@@ -67,37 +65,6 @@ def getRandomView(radius):
     else:
         return {'R': R, 't': t, 'rvec': rvec.tolist()}
 
-def getRandomView1(radius, inplane_range=np.pi/2):
-    # Uniformly sampled on a sphere
-    u = np.random.rand()
-    v = np.random.rand()
-    w = np.random.uniform(-inplane_range * np.sqrt(1 - u),
-                           inplane_range * np.sqrt(1 - u))
-    x = np.sqrt(1 - np.square(u)) * np.cos(v * 2 * np.pi) * radius
-    y = np.sqrt(1 - np.square(u)) * np.sin(v * 2 * np.pi) * radius
-    z = u * radius
-    R, t = lookAt([x, y, z], [0, 0, 0])
-    R = np.matmul(np.array([[np.cos(w), -np.sin(w), 0],
-                            [np.sin(w), np.cos(w), 0],
-                            [0, 0, 1]]), R)
-    a = v * 2 * np.pi
-    b = np.arctan(z / np.sqrt(x ** 2 + y ** 2))
-    c = w
-    return {'R': R, 't': t, 'a': a, 'b': b, 'c': c}
-
-def getRandomView2(radius, inplane_range=np.pi/2):
-    a = np.random.rand() * 2 * np.pi
-    b = np.random.rand() * np.pi / 2
-    c = np.random.uniform(-inplane_range * (1 - b / (np.pi / 2)),
-                           inplane_range * (1 - b / (np.pi / 2)))
-    x = np.cos(b) * np.cos(a) * radius
-    y = np.cos(b) * np.sin(a) * radius
-    z = np.sin(b) * radius
-    R, t = lookAt([x, y, z], [0, 0, 0])
-    R = np.matmul(np.array([[np.cos(c), -np.sin(c), 0],
-                            [np.sin(c), np.cos(c), 0],
-                            [0, 0, 1]]), R)
-    return {'R': R, 't': t, 'a': a, 'b': b, 'c': c}
 
 def getViews(view_count, view_radius, inplane_steps, randomized=False, upper_only=True):
     if not upper_only:
@@ -124,25 +91,22 @@ def getViews(view_count, view_radius, inplane_steps, randomized=False, upper_onl
                 views.append({'R': R_, 't': t, 'vp': vp, 'rz': rz})
     return views
 
+
 def getRandomViews(view_count, view_radius):
     views = []
     for i in tqdm(range(view_count), 'Generating random views: '):
         views.append(getRandomView(view_radius))
     return views
 
-def getRandomLights(view_count):
-    '''
-    :param view_count:
-    :return: list of lights
 
-    Assuming all lights comes from up
-    '''
+def getRandomLights(view_count):
     lights = []
     for i in range(view_count):
         lights.append([np.random.uniform(-light_shift, light_shift),
                        np.random.uniform(0, light_shift),
                        np.random.uniform(-light_shift, light_shift)])
     return lights
+
 
 def getPivots(xmin, xmax, ymin, ymax, zmin, zmax, step, u0, v0, resize_ratio, K, R, t, shrink):
     pivots = []
@@ -161,33 +125,11 @@ def getPivots(xmin, xmax, ymin, ymax, zmin, zmax, step, u0, v0, resize_ratio, K,
     return pivots
 
 
-def abc2Rt(a, b, c, radius):
-    x = np.cos(b) * np.cos(a) * radius
-    y = np.cos(b) * np.sin(a) * radius
-    z = np.sin(b) * radius
-    R, t = lookAt([x, y, z], [0, 0, 0])
-    R = np.matmul(np.array([[np.cos(c), -np.sin(c), 0],
-                            [np.sin(c), np.cos(c), 0],
-                            [0, 0, 1]]), R)
-    return R, t
-
-def uv2ab(u, v):
-    x = np.sqrt(1 - np.square(u)) * np.cos(v * 2 * np.pi)
-    y = np.sqrt(1 - np.square(u)) * np.sin(v * 2 * np.pi)
-    z = u
-    a = v
-    b = np.arctan(z / np.sqrt(x**2 + y**2))
-    return a, b
-
-def ab2uv(a, b):
-    u = np.sin(b)
-    v = a
-    return u, v
-
 def rot2Angle(R):
     return np.arctan2(R[2][1], R[2][2]), \
            np.arctan2(-R[2][0], np.sqrt(R[2][1]**2 + R[2][2]**2)), \
            np.arctan2(R[1][0], R[0][0])
+
 
 def angle2Rot(rx, ry, rz):
     X = [[1, 0, 0], [0, np.cos(rx), -np.sin(rx)], [0, np.sin(rx), np.cos(rx)]]

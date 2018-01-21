@@ -3,6 +3,7 @@ import numpy as np
 from PIL import Image
 from params import *
 
+
 def randomCrop(img, dim):
     L = int(np.random.rand() * (img.shape[1] - dim))
     T = int(np.random.rand() * (img.shape[0] - dim))
@@ -10,14 +11,17 @@ def randomCrop(img, dim):
 
 
 def mergeImage(img, bg):
+    bg = cv2.resize(bg, (img.shape[1], img.shape[0]))
     img = Image.fromarray(img, 'RGBA')
     bg = Image.fromarray(bg, 'RGB').convert('RGBA')
     return Image.alpha_composite(bg, img).convert('RGB')
+
 
 def randomPaste(img, backgrounds):
     bg = backgrounds[np.random.randint(0, len(backgrounds))]
     bg = randomCrop(bg, img.shape[0])
     return np.asarray(mergeImage(img, bg))
+
 
 def samplePatch(img_id, img, cor, dim, stride):
     patches = []

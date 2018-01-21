@@ -20,18 +20,21 @@ from data import getBackgrounds, getIntrinsic, getModel
 from model import *
 from sample import *
 from augment import *
+from transform import *
 
 for model_id in model_ids:
     obj_model = getModel(model_id)
+    model_pts = obj_model['pts']
+    K = getIntrinsic(model_id)
+
+    pivots = np.load(synth_base + 'orientation/{:02d}/pivots.npy'.format(model_id))
+
     dp = get_dataset_params('hinterstoisser')
     gt_path = dp['scene_gt_mpath'].format(model_id)
     gt = load_yaml(gt_path)
-    K = getIntrinsic(model_id)
     img_count = len(gt) // 20
 
-    render_base = synth_base + 'orientation/{:02d}/render/'.format(model_id)
-    pivots = np.array([_[0] for _ in json.load(open(render_base + '000000.json', 'r'))['pivots']])
-
+    images0 = []
     images = []
     ratios = []
     images_origin = []  # in (u, v)
@@ -40,25 +43,82 @@ for model_id in model_ids:
 
         img_path = dp['test_rgb_mpath'].format(model_id, i)
         image = cv2.imread(img_path)
-        pad = 8
-        dim = max(bb[2], bb[3])
-        image = image[max(0, bb[1] - pad): bb[1] + bb[3] + pad, max(0, bb[0] - pad): bb[0] + bb[2] + pad]
+        images0.append(image)
+        dim = int(max(bb[2], bb[3]))
+        v_center = int(bb[1] + bb[3] / 2)
+        u_center = int(bb[0] + bb[2] / 2)
         ratio = dim / render_resize
-        image = cv2.resize(image, (int(bb[2] * ratio), int(bb[3] * ratio)))
+        image = image[v_center - dim // 2: v_center + dim // 2, u_center - dim // 2: u_center + dim // 2]
+        image = cv2.resize(image, (render_resize, render_resize))
         images.append(image)
         ratios.append(ratio)
-        images_origin.append(np.array([max(0, bb[0] - pad), max(0, bb[1] - pad)]))
-    '''
-    for img in images:
-        cv2.imshow('', img)
-        cv2.waitKey()
-    '''
+        images_origin.append(np.array([u_center - dim // 2, v_center - dim // 2]))
 
-    model = ConvolutionalAutoEncoder()
-    model.load_state_dict(torch.load('models/model_epoch4.pth'))
+    model = CNN()
+    model.load_state_dict(torch.load('models/model_epoch010_loss_0.001257_val_0.001168.pth'))
     model.cuda()
     model.eval()
+    '''
+    bgs = getBackgrounds(1000)
+    render_base = synth_base + 'orientation/{:02d}/render/'.format(model_id)
+    def getSyntheticData(path, with_info):
+        images = []
+        images_info = []
+        filenames = sorted(os.listdir(path))[:100]
+        for filename in tqdm(filenames, 'Reading synthetic'):
+            ext = os.path.splitext(filename)[1]
+            if ext == '.png':
+                images.append(np.asarray(Image.open(path + filename)))
+            if ext == '.json':
+                images_info.append(json.load(open(path + filename, 'r')))
+        if with_info:
+            return images, images_info
+        else:
+            return images
+    images, images_info = getSyntheticData(render_base, True)
+    images = [cv2.cvtColor(image, cv2.COLOR_RGBA2BGRA) for image in images]
+    images = np.array(images)
+    images = [randomPaste(image, bgs) for image in images]
+    '''
+    for i, img in enumerate(images):
+        objectPts = pivots
+        cv2.imshow('!!', img)
 
+        x = np.transpose(np.array([img]).astype(np.float), (0, 3, 1, 2)) / 255
+        x = Variable(torch.FloatTensor(x)).cuda()
+
+        output = model.forward(x).data.cpu().numpy() * render_resize + render_resize / 2
+        imagePts = np.reshape(output, (-1, 2))
+
+        pivots_vis = np.zeros((96, 96)).astype(np.float32)
+        for p in imagePts:
+            u = int(p[0])
+            v = int(p[1])
+            if 0 <= u < 96 and 0 <= v < 96:
+                pivots_vis[u][v] = 1.
+        cv2.imshow('pivots', pivots_vis)
+
+        print(objectPts)
+        print(imagePts)
+
+        imagePts = imagePts + np.array(images_origin[i])
+
+        pnp = cv2.solvePnPRansac(np.array(objectPts).astype(np.float32),
+                                 np.array(imagePts).astype(np.float32),
+                                 np.array(K), None)
+        rvec = pnp[1]
+        R = cv2.Rodrigues(rvec)[0]
+        t = pnp[2]
+        print(R)
+        print(t)
+
+        img = renderer.render(obj_model, (img_w, img_h), K, R, t, mode='rgb')
+        cv2.imshow('??', cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        cv2.imshow('!?', images0[i])
+        cv2.waitKey()
+
+
+    '''
     def getSyntheticData(path, with_info):
         images = []
         images_info = []
@@ -73,7 +133,7 @@ for model_id in model_ids:
             return images, images_info
         else:
             return images
-
+    
     patch_base = synth_base + 'orientation/{:02d}/patch/'.format(model_id)
     pivot_images = getSyntheticData(patch_base, False)
     pivot_images = pivot_images[:2048]
@@ -134,5 +194,5 @@ for model_id in model_ids:
         cv2.imshow('', cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
         cv2.imshow('{}'.format(i), images[i])
         cv2.waitKey()
-
+    '''
 

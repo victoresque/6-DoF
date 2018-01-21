@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from params import *
 
+
 class ContrastiveLoss(nn.Module):
     def __init__(self, margin=2.0):
         super(ContrastiveLoss, self).__init__()
@@ -78,7 +79,18 @@ class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
         self.cnn1 = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=3, padding=1),
+            nn.Conv2d(3, 16, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(16),
+            nn.Conv2d(16, 16, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(16),
+            nn.Conv2d(16, 16, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(16),
+            nn.MaxPool2d(2, stride=2),
+            # 48x48
+            nn.Conv2d(16, 32, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.BatchNorm2d(32),
             nn.Conv2d(32, 32, kernel_size=3, padding=1),
@@ -88,34 +100,31 @@ class CNN(nn.Module):
             nn.ReLU(inplace=True),
             nn.BatchNorm2d(32),
             nn.MaxPool2d(2, stride=2),
-            # 32x32
+            # 24x24
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.BatchNorm2d(64),
             nn.Conv2d(64, 64, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.BatchNorm2d(64),
-            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.MaxPool2d(2, stride=2),
+            # 12x12
+            nn.Conv2d(64, 64, kernel_size=3),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(64),
+            nn.Conv2d(64, 64, kernel_size=3),
             nn.ReLU(inplace=True),
             nn.BatchNorm2d(64),
             nn.MaxPool2d(2, stride=2),
-            # 16x16
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm2d(128),
-            nn.Conv2d(128, 128, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm2d(128),
-            nn.MaxPool2d(2, stride=2),
-            # 8x8
+            # 4x4
         )
 
         self.fc1 = nn.Sequential(
-            nn.Linear(128 * 8 * 8, 512),
+            nn.Linear(64 * 4 * 4, 256),
             nn.ReLU(inplace=True),
-            nn.Linear(512, 1024),
+            nn.Linear(256, 256),
             nn.ReLU(inplace=True),
-            nn.Linear(1024, 2 * pivot_step ** 3)
+            nn.Linear(256, 2 * pivot_step ** 3),
         )
 
     def forward(self, x):

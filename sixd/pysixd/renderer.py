@@ -311,7 +311,7 @@ def draw_depth(shape, vertex_buffer, index_buffer, mat_model, mat_view, mat_proj
     return depth
 
 #-------------------------------------------------------------------------------
-def render(model, im_size, K, R, t, clip_near=50, clip_far=2000,
+def render(model, im_size, K, R, t, clip_near=50, clip_far=10000,
            texture=None, surf_color=None, bg_color=(0.0, 0.0, 0.0, 0.0),
            ambient_weight=0.5, shading='flat', mode='rgb+depth', light_src=[0, 0, 0]):
 
