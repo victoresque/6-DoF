@@ -16,8 +16,8 @@ def drawBoundingBox(image, l, t, r, b):
 
 def getBoundingBox(image):
     a = np.where(image != 0)
-    return np.min(a[1])/640, np.min(a[0])/480, \
-           np.max(a[1])/640, np.max(a[0])/480
+    return np.min(a[1]), np.min(a[0]), \
+           np.max(a[1]), np.max(a[0])
 
 
 def lookAt(src, dst):

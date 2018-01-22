@@ -10,9 +10,14 @@ seq_affine = iaa.Sequential([
 ])
 
 seq_color = iaa.Sequential([
-    iaa.GaussianBlur(sigma=(0.8, 1.4)),
-    iaa.Multiply((0.5, 1.2)),
-    iaa.Multiply((0.9, 1.1), per_channel=0.4),
+    iaa.GaussianBlur(sigma=(1.0, 2.0)),
+    iaa.AddToHueAndSaturation((-32, 32), channels=[0]),
+    iaa.AddToHueAndSaturation((-16, -16), channels=[1]),
+    iaa.Multiply((0.5, 1.3)),
+])
+
+seq_brighten = iaa.Sequential([
+    iaa.Multiply((1.4, 1.4))
 ])
 
 seq = iaa.Sequential([

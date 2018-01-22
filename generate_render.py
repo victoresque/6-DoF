@@ -39,14 +39,26 @@ for model_id in model_ids:
                                     ambient_weight=np.random.uniform(ambient_range[0], ambient_range[1]),
                                     light_src=light)
 
+        bb = getBoundingBox(model_img)
+        u_center = (bb[0] + bb[2]) // 2
+        v_center = (bb[1] + bb[3]) // 2
+        pad = 3
+        dim = max(bb[2] - bb[0], bb[3] - bb[1]) + pad
+        model_img = model_img[v_center - dim // 2: v_center + dim // 2,
+                              u_center - dim // 2: u_center + dim // 2]
+
+        # pivots = getPivots(xmin, xmax, ymin, ymax, zmin, zmax, pivot_step,
+        #                    img_w // 2 - render_crop // 2, img_h // 2 - render_crop // 2,
+        #                    render_resize / render_crop, K, R, t, shrink=0.0)
+
         pivots = getPivots(xmin, xmax, ymin, ymax, zmin, zmax, pivot_step,
-                           img_w // 2 - render_crop // 2, img_h // 2 - render_crop // 2,
-                           render_resize / render_crop, K, R, t, shrink=0.0)
+                           u_center - dim // 2, v_center - dim // 2,
+                           render_resize / dim, K, R, t, shrink=0.0)
 
         pivots = [p[1] for p in pivots]
 
-        model_img = model_img[img_h // 2 - render_crop // 2: img_h // 2 + render_crop // 2,
-                              img_w // 2 - render_crop // 2: img_w // 2 + render_crop // 2]
+        # model_img = model_img[img_h // 2 - render_crop // 2: img_h // 2 + render_crop // 2,
+        #                       img_w // 2 - render_crop // 2: img_w // 2 + render_crop // 2]
 
         model_img = cv2.resize(model_img, (render_resize, render_resize), interpolation=cv2.INTER_LINEAR)
 
@@ -63,7 +75,6 @@ for model_id in model_ids:
     lights = getRandomLights(len(views))
     print(len(views), 'views.')
 
-    # renderModelImage(0, views[0], lights[0])
     Parallel(n_jobs=6, verbose=1)(delayed(renderModelImage)(i, view, light) \
                                   for i, (view, light) in enumerate(zip(views, lights)))
 

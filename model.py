@@ -79,52 +79,53 @@ class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
         self.cnn1 = nn.Sequential(
-            nn.Conv2d(3, 16, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
+            nn.Conv2d(3, 16, kernel_size=5, padding=2),
+            nn.SELU(inplace=True),
             nn.BatchNorm2d(16),
-            nn.Conv2d(16, 16, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
+            nn.Conv2d(16, 16, kernel_size=5, padding=2),
+            nn.SELU(inplace=True),
             nn.BatchNorm2d(16),
-            nn.Conv2d(16, 16, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
+            nn.Conv2d(16, 16, kernel_size=5, padding=2),
+            nn.SELU(inplace=True),
             nn.BatchNorm2d(16),
             nn.MaxPool2d(2, stride=2),
             # 48x48
             nn.Conv2d(16, 32, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
+            nn.SELU(inplace=True),
             nn.BatchNorm2d(32),
             nn.Conv2d(32, 32, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
+            nn.SELU(inplace=True),
             nn.BatchNorm2d(32),
             nn.Conv2d(32, 32, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
+            nn.SELU(inplace=True),
             nn.BatchNorm2d(32),
             nn.MaxPool2d(2, stride=2),
             # 24x24
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
+            nn.SELU(inplace=True),
             nn.BatchNorm2d(64),
             nn.Conv2d(64, 64, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
+            nn.SELU(inplace=True),
             nn.BatchNorm2d(64),
             nn.MaxPool2d(2, stride=2),
             # 12x12
-            nn.Conv2d(64, 64, kernel_size=3),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm2d(64),
-            nn.Conv2d(64, 64, kernel_size=3),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(64, 128, kernel_size=3),
+            nn.SELU(inplace=True),
+            nn.BatchNorm2d(128),
+            nn.Conv2d(128, 128, kernel_size=3),
+            nn.SELU(inplace=True),
+            nn.BatchNorm2d(128),
             nn.MaxPool2d(2, stride=2),
             # 4x4
+
         )
 
         self.fc1 = nn.Sequential(
-            nn.Linear(64 * 4 * 4, 256),
-            nn.ReLU(inplace=True),
-            nn.Linear(256, 256),
-            nn.ReLU(inplace=True),
-            nn.Linear(256, 2 * pivot_step ** 3),
+            nn.Linear(128 * 4 * 4, 512),
+            nn.SELU(inplace=True),
+            nn.Linear(512, 512),
+            nn.SELU(inplace=True),
+            nn.Linear(512, 2 * pivot_step ** 3),
         )
 
     def forward(self, x):

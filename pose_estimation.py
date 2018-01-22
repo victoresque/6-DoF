@@ -14,6 +14,7 @@ from sklearn.utils import shuffle
 from tqdm import tqdm
 from sixd.params.dataset_params import get_dataset_params
 from sixd.pysixd import renderer
+from sixd.pysixd import pose_error
 from sixd.pysixd.inout import load_ply, load_info, load_gt, load_yaml
 from params import *
 from data import getBackgrounds, getIntrinsic, getModel
@@ -32,7 +33,7 @@ for model_id in model_ids:
     dp = get_dataset_params('hinterstoisser')
     gt_path = dp['scene_gt_mpath'].format(model_id)
     gt = load_yaml(gt_path)
-    img_count = len(gt) // 20
+    img_count = len(gt)
 
     images0 = []
     images = []
@@ -45,8 +46,8 @@ for model_id in model_ids:
         image = cv2.imread(img_path)
         images0.append(image)
         dim = int(max(bb[2], bb[3]))
-        v_center = int(bb[1] + bb[3] / 2)
-        u_center = int(bb[0] + bb[2] / 2)
+        v_center = max(int(bb[1] + bb[3] / 2), dim // 2)
+        u_center = max(int(bb[0] + bb[2] / 2), dim // 2)
         ratio = dim / render_resize
         image = image[v_center - dim // 2: v_center + dim // 2, u_center - dim // 2: u_center + dim // 2]
         image = cv2.resize(image, (render_resize, render_resize))
@@ -55,11 +56,13 @@ for model_id in model_ids:
         images_origin.append(np.array([u_center - dim // 2, v_center - dim // 2]))
 
     model = CNN()
-    model.load_state_dict(torch.load('models/model_epoch010_loss_0.001257_val_0.001168.pth'))
+    model.load_state_dict(torch.load('models/model_epoch028_loss_0.001318_val_0.001352.pth'))
     model.cuda()
     model.eval()
+
+
     '''
-    bgs = getBackgrounds(1000)
+    bgs = getBackgrounds(100)
     render_base = synth_base + 'orientation/{:02d}/render/'.format(model_id)
     def getSyntheticData(path, with_info):
         images = []
@@ -80,119 +83,63 @@ for model_id in model_ids:
     images = np.array(images)
     images = [randomPaste(image, bgs) for image in images]
     '''
+
+
+    visualize = False
+
+
+    ae_sum = 0.
+    re_sum = 0.
+    te_sum = 0.
     for i, img in enumerate(images):
         objectPts = pivots
-        cv2.imshow('!!', img)
-
         x = np.transpose(np.array([img]).astype(np.float), (0, 3, 1, 2)) / 255
         x = Variable(torch.FloatTensor(x)).cuda()
 
         output = model.forward(x).data.cpu().numpy() * render_resize + render_resize / 2
         imagePts = np.reshape(output, (-1, 2))
 
-        pivots_vis = np.zeros((96, 96)).astype(np.float32)
-        for p in imagePts:
-            u = int(p[0])
-            v = int(p[1])
-            if 0 <= u < 96 and 0 <= v < 96:
-                pivots_vis[u][v] = 1.
-        cv2.imshow('pivots', pivots_vis)
+        if visualize:
+            pivots_vis = np.zeros((96, 96, 3)).astype(np.float32)
+            for pi, p in enumerate(imagePts):
+                u = int(p[0])
+                v = int(p[1])
+                if 0 <= u < 96 and 0 <= v < 96:
+                    if 0 <= pi < pivot_step ** 2:
+                        pivots_vis[v][u] = np.array([1.0, 1.0, 0.0])
+                    if pivot_step ** 2 <= pi < 2 * pivot_step ** 2:
+                        pivots_vis[v][u] = np.array([0.0, 1.0, 1.0])
+                    if 2 * pivot_step ** 2 <= pi < 3 * pivot_step ** 2:
+                        pivots_vis[v][u] = np.array([1.0, 0.0, 1.0])
+            cv2.imshow('pivots', pivots_vis)
 
-        print(objectPts)
-        print(imagePts)
-
-        imagePts = imagePts + np.array(images_origin[i])
-
-        pnp = cv2.solvePnPRansac(np.array(objectPts).astype(np.float32),
-                                 np.array(imagePts).astype(np.float32),
-                                 np.array(K), None)
-        rvec = pnp[1]
-        R = cv2.Rodrigues(rvec)[0]
-        t = pnp[2]
-        print(R)
-        print(t)
-
-        img = renderer.render(obj_model, (img_w, img_h), K, R, t, mode='rgb')
-        cv2.imshow('??', cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-        cv2.imshow('!?', images0[i])
-        cv2.waitKey()
-
-
-    '''
-    def getSyntheticData(path, with_info):
-        images = []
-        images_info = []
-        filenames = sorted(os.listdir(path))
-        for filename in tqdm(filenames, 'Reading synthetic'):
-            ext = os.path.splitext(filename)[1]
-            if ext == '.png':
-                images.append(np.asarray(Image.open(path + filename)))
-            if ext == '.json':
-                images_info.append(json.load(open(path + filename, 'r')))
-        if with_info:
-            return images, images_info
-        else:
-            return images
-    
-    patch_base = synth_base + 'orientation/{:02d}/patch/'.format(model_id)
-    pivot_images = getSyntheticData(patch_base, False)
-    pivot_images = pivot_images[:2048]
-    pivot_encode = []
-    pivot_encode_id = []
-    for i, img in enumerate(tqdm(pivot_images)):
-        img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
-        x = np.transpose(np.array([img]).astype(np.float), (0, 3, 1, 2)) / 255
-        x = Variable(torch.FloatTensor(x)).cuda()
-        output = model.forward(x).data.cpu().numpy()
-        output = np.transpose(output, (0, 2, 3, 1))
-        pivot_encode.append(model.encode(x).data.cpu().numpy().flatten())
-        pivot_encode_id.append(i)
-
-    knn = KNeighborsClassifier().fit(pivot_encode, pivot_encode_id)
-
-    for i, img in enumerate(images):
-        stride = 4
-        patches = []
-        patches_center = []  # in (u, v)
-        for i_center in range(patch_size // 2, img.shape[0] - patch_size // 2, stride):
-            for j_center in range(patch_size // 2, img.shape[1] - patch_size // 2, stride):
-                    patches.append(img[i_center - patch_size // 2: i_center + patch_size // 2,
-                                       j_center - patch_size // 2: j_center + patch_size // 2])
-                    patches_center.append([j_center * ratios[i] + images_origin[i][0],
-                                           i_center * ratios[i] + images_origin[i][1]])
-
-        objectPts = []
-        imagePts = []
-        for j, patch in enumerate(patches):
-            x = np.transpose(np.array([patch]).astype(np.float), (0, 3, 1, 2)) / 255
-            x = Variable(torch.FloatTensor(x)).cuda()
-
-            output = model.forward(x).data.cpu().numpy()
-            encode = model.encode(x).data.cpu().numpy().flatten()
-            output = np.transpose(output, (0, 2, 3, 1))
-
-            k = 1
-            pivot_dis, pivot_id = knn.kneighbors([encode], k)
-            # pivot_id = knn.kneighbors([encode], k)[1][0]
-            for ki in range(k):
-                objectPts.append(pivots[pivot_id[0][ki] % 27])
-                imagePts.append(patches_center[j])
-
-        print(len(objectPts))
-        print(len(imagePts))
+        imagePts = imagePts * ratios[i] + np.array(images_origin[i])
 
         pnp = cv2.solvePnPRansac(np.array(objectPts).astype(np.float32),
-                                 np.array(imagePts).astype(np.float32),
-                                 np.array(K), None)
-        rvec = pnp[1]
-        R = cv2.Rodrigues(rvec)[0]
-        t = pnp[2]
-        print(R)
-        print(t)
+                           np.array(imagePts).astype(np.float32),
+                           np.array(K), None)
 
-        img = renderer.render(obj_model, (img_w, img_h), K, R, t, mode='rgb')
-        cv2.imshow('', cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-        cv2.imshow('{}'.format(i), images[i])
-        cv2.waitKey()
-    '''
+        R = cv2.Rodrigues(pnp[1])[0]
+        t = pnp[2].flatten()
+        R_gt = np.array(gt[i][0]['cam_R_m2c']).reshape((3, 3))
+        t_gt = np.array(gt[i][0]['cam_t_m2c'])
 
+        ae = pose_error.add(R, t, R_gt, t_gt, obj_model)
+        re = pose_error.re(R, R_gt)
+        te = pose_error.te(t, t_gt)
+
+        print('{:.2f}\t{:.2f}\t{:.2f}'.format(ae, re, te))
+
+        if visualize or ae < 10:
+            img = renderer.render(obj_model, (img_w, img_h), K, R, t, mode='rgb')
+            cv2.imshow('??', cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+            cv2.imshow('!?', images0[i])
+            cv2.waitKey()
+
+        ae_sum += ae
+        re_sum += re
+        te_sum += te
+
+    print('Average: {:.2f}\t{:.2f}\t{:.2f}'.format(ae_sum / img_count,
+                                                   re_sum / img_count,
+                                                   te_sum / img_count))
