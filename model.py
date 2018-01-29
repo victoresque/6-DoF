@@ -125,7 +125,7 @@ class CNN(nn.Module):
             nn.SELU(inplace=True),
             nn.Linear(512, 512),
             nn.SELU(inplace=True),
-            nn.Linear(512, 2 * pivot_step ** 3),
+            nn.Linear(512, 2 * 27),
         )
 
     def forward(self, x):

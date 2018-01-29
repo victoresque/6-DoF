@@ -125,8 +125,33 @@ def add(R_est, t_est, R_gt, t_gt, model):
     is nx3 ndarray with 3D model points.
     :return: Error of pose_est w.r.t. pose_gt.
     """
-    pts_est = misc.transform_pts_Rt(model['pts'], R_est, t_est)
-    pts_gt = misc.transform_pts_Rt(model['pts'], R_gt, t_gt)
+    # pts_est = misc.transform_pts_Rt(model['pts'], R_est, t_est)
+    # pts_gt = misc.transform_pts_Rt(model['pts'], R_gt, t_gt)
+    pts_est = model['pts'].copy()
+    pts_gt = model['pts'].copy()
+    for i, pt in enumerate(pts_est):
+        pt = np.matmul(R_est, pt.reshape((3, 1))) + t_est.reshape((3, 1))
+        pts_est[i] = pt.flatten()
+    for i, pt in enumerate(pts_gt):
+        pt = np.matmul(R_gt, pt.reshape((3, 1))) + t_gt.reshape((3, 1))
+        pts_gt[i] = pt.flatten()
+    e = np.linalg.norm(pts_est - pts_gt, axis=1).mean()
+    return e
+
+def reproj(K, R_est, t_est, R_gt, t_gt, model):
+    pts_est = model['pts'].copy()
+    pts_gt = model['pts'].copy()
+    for i, pt in enumerate(pts_est):
+        pt = np.matmul(R_est, pt.reshape((3, 1))) + t_est.reshape((3, 1))
+        pt = np.matmul(K, pt)
+        pt = pt / pt[2][0]
+        pts_est[i] = pt.flatten()
+    for i, pt in enumerate(pts_gt):
+        pt = np.matmul(R_gt, pt.reshape((3, 1))) + t_gt.reshape((3, 1))
+        pt = np.matmul(K, pt)
+        pt = pt / pt[2][0]
+        pts_gt[i] = pt.flatten()
+
     e = np.linalg.norm(pts_est - pts_gt, axis=1).mean()
     return e
 

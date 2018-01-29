@@ -1,0 +1,108 @@
+import os
+import sys
+import json
+import numpy as np
+from PIL import Image
+import cv2
+import matplotlib.pyplot as plt
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.autograd import Variable
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.utils import shuffle
+from tqdm import tqdm
+from sixd.params.dataset_params import get_dataset_params
+from sixd.pysixd import renderer
+from sixd.pysixd import pose_error
+from sixd.pysixd.inout import load_ply, load_info, load_gt, load_yaml
+from params import *
+from data import getBackgrounds, getIntrinsic, getModel
+from model import *
+from sample import *
+from augment import *
+from transform import *
+
+for model_id in model_ids:
+    obj_model = getModel(model_id)
+
+    model_pts = obj_model['pts']
+    xmin, xmax = np.min(model_pts[:, 0]), np.max(model_pts[:, 0])
+    ymin, ymax = np.min(model_pts[:, 1]), np.max(model_pts[:, 1])
+    zmin, zmax = np.min(model_pts[:, 2]), np.max(model_pts[:, 2])
+    radius = max(xmax - xmin, ymax - ymin, zmax - zmin) / 2
+
+    model_pts = obj_model['pts']
+    K = getIntrinsic(model_id)
+
+    # pivots = np.load(synth_base + 'orientation/{:02d}/pivots.npy'.format(model_id))
+
+    dp = get_dataset_params('hinterstoisser')
+    gt_path = dp['scene_gt_mpath'].format(model_id)
+    gt = load_yaml(gt_path)
+
+    img_count = len(gt)
+
+    id_chosen = []
+    images_chosen = []
+    R_chosen = []
+    pivots_chosen = []
+    for i in tqdm(range(img_count)):
+        img_path = dp['test_rgb_mpath'].format(model_id, i)
+        image = cv2.imread(img_path)
+        R_i = np.array(gt[i][0]['cam_R_m2c']).reshape((3, 3))
+        t_i = np.array(gt[i][0]['cam_t_m2c']).reshape((3, 1))
+
+        choose = True
+        thres = 12
+        for R in R_chosen:
+            re = pose_error.re(R, R_i)
+            if re < thres:
+                choose = False
+                break
+
+        if choose:
+            bb = gt[i][0]['obj_bb']
+            dim = int(max(bb[2], bb[3]) * 1.2)
+            v_center = max(int(bb[1] + bb[3] / 2), dim // 2)
+            u_center = max(int(bb[0] + bb[2] / 2), dim // 2)
+            image = image[v_center - dim // 2: v_center + dim // 2, u_center - dim // 2: u_center + dim // 2]
+            image = cv2.resize(image, (render_resize, render_resize))
+
+            u0 = u_center - dim // 2
+            v0 = v_center - dim // 2
+
+            #pivots = getPivots(xmin, xmax, ymin, ymax, zmin, zmax, pivot_step,
+            #                   u0, v0, render_resize / dim, K, R_i, t_i, shrink=0.0)
+            pivots = getIcosahedronPivots(radius, u0, v0, render_resize / dim, K, R_i, t_i)
+            '''
+            pivots_vis = np.zeros((96, 96, 3)).astype(np.float32)
+            for pi, p in enumerate(pivots):
+                p = p[1]
+                u = int(p[0])
+                v = int(p[1])
+                if 0 <= u < 96 and 0 <= v < 96:
+                    if 0 <= pi < pivot_step ** 2:
+                        pivots_vis[v][u] = np.array([1.0, 1.0, 0.0])
+                    if pivot_step ** 2 <= pi < 2 * pivot_step ** 2:
+                        pivots_vis[v][u] = np.array([0.0, 1.0, 1.0])
+                    if 2 * pivot_step ** 2 <= pi < 3 * pivot_step ** 2:
+                        pivots_vis[v][u] = np.array([1.0, 0.0, 1.0])
+            cv2.imshow('image', image)
+            cv2.imshow('pivots', pivots_vis)
+            cv2.waitKey()
+            '''
+            id_chosen.append(i)
+            images_chosen.append(image)
+            R_chosen.append(R_i)
+            pivots_chosen.append(pivots)
+
+    print(len(images_chosen), 'training images.')
+
+    udpstyle_base = synth_base + 'udpstyle/{:02d}/'.format(model_id)
+    for i in range(len(images_chosen)):
+        cv2.imwrite(udpstyle_base + '{:06d}.png'.format(i), images_chosen[i])
+        json.dump({
+            'pivots': [p[1] for p in pivots_chosen[i]]
+        }, open(udpstyle_base + '{:06d}.json'.format(i), 'w'))
+

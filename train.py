@@ -21,11 +21,12 @@ from sample import *
 bgs = getBackgrounds(300)
 for model_id in model_ids:
     render_base = synth_base + 'orientation/{:02d}/render/'.format(model_id)
+    udpstyle_base = synth_base + 'udpstyle/{:02d}/'.format(model_id)
 
     def getSyntheticData(path, with_info):
         images = []
         images_info = []
-        filenames = sorted(os.listdir(path))
+        filenames = sorted(os.listdir(path))[:100]
         for filename in tqdm(filenames, 'Reading synthetic'):
             ext = os.path.splitext(filename)[1]
             if ext == '.png':
@@ -38,13 +39,26 @@ for model_id in model_ids:
             return images
 
     images, images_info = getSyntheticData(render_base, True)
+    images_accv, images_info_accv = getSyntheticData(udpstyle_base, True)
 
     images = [cv2.cvtColor(image, cv2.COLOR_RGBA2BGRA) for image in images]
     images = np.array(images)
+    images = np.array([randomPaste(x_, bgs) for x_ in images])
+
+    for img in images:
+        cv2.imshow('', img)
+        cv2.waitKey()
+
+    images_accv = [cv2.cvtColor(image, cv2.COLOR_RGB2BGR) for image in images_accv]
+    images_accv = np.array(images_accv)
 
     pivots = [[pivot for pivot in image_info['pivots']] for image_info in images_info]
     pivots = [np.array(pivot).flatten() for pivot in pivots]
     pivots = (np.array(pivots) - render_resize / 2) / render_resize
+
+    pivots_accv = [[pivot for pivot in image_info['pivots']] for image_info in images_info_accv]
+    pivots_accv = [np.array(pivot).flatten() for pivot in pivots_accv]
+    pivots_accv = (np.array(pivots_accv) - render_resize / 2) / render_resize
     '''
     for i, image in enumerate(images):
         scale = np.random.uniform(0.6, 0.9)
@@ -63,8 +77,8 @@ for model_id in model_ids:
     # seq.show_grid(cv2.cvtColor(images[12], cv2.COLOR_BGR2RGB), 8, 8)
 
     model = CNN()
-    continue_from = 29
-    model.load_state_dict(torch.load('models/model_epoch029_loss_0.001331_val_0.001339.pth'))
+    continue_from = 0
+    # model.load_state_dict(torch.load('models/model_epoch001_loss_0.054722.pth'))
     model.cuda()
 
     model_parameters = filter(lambda p: p.requires_grad, model.parameters())
@@ -72,10 +86,10 @@ for model_id in model_ids:
     print('Trainable parameters:', params)
 
     criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=2e-5, weight_decay=0.)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=0.0)
 
     n_input = len(images)
-    batch_size = 64
+    batch_size = 32
     def train(epoch, x, y):
         print('Epoch {:02d}:'.format(epoch))
 
@@ -87,20 +101,22 @@ for model_id in model_ids:
         val_split = 0.1
 
         for batch_id in range(n_batch):
+
             x_batch = x[batch_id * batch_size: (batch_id+1) * batch_size]
 
-            scale = np.random.uniform(0.5, 2.0)
+            scale = np.random.uniform(0.5, 1.8)
             scaler = iaa.Affine(scale=scale)
             x_batch = scaler.augment_images(x_batch)
             x_batch = np.array([randomPaste(x_, bgs) for x_ in x_batch])
             x_batch = seq.augment_images(x_batch)
-            '''
-            for x_ in x_batch:
-                cv2.imshow('', x_)
-                cv2.waitKey()
-            '''
+            
             y_batch = y[batch_id * batch_size: (batch_id + 1) * batch_size].astype(np.float)
             y_batch = y_batch * scale
+
+            images_a, pivots_a = shuffle(images_accv, pivots_accv)
+            x_batch = np.append(x_batch, images_a[:batch_size], axis=0)
+            y_batch = np.append(y_batch, pivots_a[:batch_size], axis=0)
+
             '''
             for i, img in enumerate(x_batch):
                 yy = np.reshape(y_batch[i], (-1, 2))
@@ -134,14 +150,18 @@ for model_id in model_ids:
                     100. * batch_id / (n_batch * (1 - val_split)), loss.data[0]))
 
         avg_loss = total_loss / (n_batch * (1 - val_split))
-        avg_val_loss =  total_val_loss / (n_batch * val_split)
         print('Average loss: {:.6f}'.format(avg_loss))
-        print('Average validation loss: {:.6f}'.format(avg_val_loss))
-        torch.save(model.state_dict(),
-                   'models/model_epoch{:03d}_loss_{:.6f}_val_{:.6f}.pth'.format(epoch, avg_loss, avg_val_loss))
+        if val_split > 0:
+            avg_val_loss =  total_val_loss / (n_batch * val_split)
+            print('Average validation loss: {:.6f}'.format(avg_val_loss))
+            torch.save(model.state_dict(),
+                       'models/model_epoch{:03d}_loss_{:.6f}_val_{:.6f}.pth'.format(epoch, avg_loss, avg_val_loss))
+        else:
+            torch.save(model.state_dict(),
+                       'models/model_epoch{:03d}_loss_{:.6f}.pth'.format(epoch, avg_loss))
         return train_loss
 
     train_loss = []
     images, pivots = shuffle(images, pivots)
-    for epoch in range(continue_from + 1, 2000 + 1):
+    for epoch in range(continue_from + 1, 99999 + 1):
         train_loss.extend(train(epoch, images, pivots))

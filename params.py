@@ -15,8 +15,8 @@ patch_size = 24
 
 model_ids = [6]
 view_radius = 1024
-view_count = 1024
-view_inplane_steps = 60
+view_count = 256
+view_inplane_steps = 36
 # t_shift = [[-30, 15], [-20, 20], [-200, 100]]
 t_shift = [[-0, 0], [-0, 0], [-0, 0]]
 
