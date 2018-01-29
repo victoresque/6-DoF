@@ -71,14 +71,6 @@ def getViews(view_count, view_radius, inplane_steps, randomized=False, upper_onl
         view_count = view_count // 2
     viewpoints = fibonacci_sampling(n_pts=view_count + (view_count + 1 % 2), radius=view_radius)
     viewpoints = np.array(viewpoints)
-    '''
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d', aspect='equal')
-    ax.scatter(viewpoints[:, 0], viewpoints[:, 1], viewpoints[:, 2])
-    plt.show()
-    '''
     views = []
     for i, vp in enumerate(tqdm(viewpoints, 'Generating views: ')):
         if vp[2] > -0.2 * view_radius:
@@ -108,8 +100,8 @@ def getRandomLights(view_count):
     return lights
 
 
-def getPivots(xmin, xmax, ymin, ymax, zmin, zmax, step, u0, v0, resize_ratio, K, R, t, shrink):
-    pivots = []
+def getAnchors(xmin, xmax, ymin, ymax, zmin, zmax, step, u0, v0, resize_ratio, K, R, t, shrink):
+    anchors = []
     xmin, xmax = xmin + shrink * (xmax - xmin) / 2, xmax - shrink * (xmax - xmin) / 2
     ymin, ymax = ymin + shrink * (ymax - ymin) / 2, ymax - shrink * (ymax - ymin) / 2
     zmin, zmax = zmin + shrink * (zmax - zmin) / 2, zmax - shrink * (zmax - zmin) / 2
@@ -121,12 +113,12 @@ def getPivots(xmin, xmax, ymin, ymax, zmin, zmax, step, u0, v0, resize_ratio, K,
                                   [zmin + (zmax - zmin) * k / (step - 1)]])
                 p_cam = np.matmul(R, p_obj) + t
                 p_screen = (np.matmul(K, p_cam) / p_cam[2] - np.array([[u0], [v0], [0]])) * resize_ratio
-                pivots.append([p_obj.squeeze().tolist(), p_screen.flatten()[:2].tolist()])
-    return pivots
+                anchors.append([p_obj.squeeze().tolist(), p_screen.flatten()[:2].tolist()])
+    return anchors
 
 
-def getIcosahedronPivots(radius, u0, v0, resize_ratio, K, R, t):
-    pivots = []
+def getIcosahedronAnchors(radius, u0, v0, resize_ratio, K, R, t):
+    anchors = []
     p_ico = [[-0.26286500, 0.0000000, 0.42532500],
              [0.26286500, 0.0000000, 0.42532500],
              [-0.26286500, 0.0000000, -0.42532500],
@@ -143,8 +135,9 @@ def getIcosahedronPivots(radius, u0, v0, resize_ratio, K, R, t):
     for i in range(12):
         p_cam = np.matmul(R, p_ico[i]) + t
         p_screen = (np.matmul(K, p_cam) / p_cam[2] - np.array([[u0], [v0], [0]])) * resize_ratio
-        pivots.append([p_ico[i].squeeze().tolist(), p_screen.flatten()[:2].tolist()])
-    return pivots
+        anchors.append([p_ico[i].squeeze().tolist(), p_screen.flatten()[:2].tolist()])
+    return anchors
+
 
 def rot2Angle(R):
     return np.arctan2(R[2][1], R[2][2]), \

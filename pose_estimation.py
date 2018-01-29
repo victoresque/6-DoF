@@ -4,13 +4,8 @@ import json
 import numpy as np
 from PIL import Image
 import cv2
-import matplotlib.pyplot as plt
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from torch.autograd import Variable
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.utils import shuffle
 from tqdm import tqdm
 from sixd.params.dataset_params import get_dataset_params
 from sixd.pysixd import renderer
@@ -20,7 +15,6 @@ from params import *
 from data import getBackgrounds, getIntrinsic, getModel
 from model import *
 from sample import *
-from augment import *
 from transform import *
 
 for model_id in model_ids:
@@ -28,7 +22,7 @@ for model_id in model_ids:
     model_pts = obj_model['pts']
     K = getIntrinsic(model_id)
 
-    pivots = np.load(synth_base + 'orientation/{:02d}/pivots.npy'.format(model_id))
+    anchors = np.load(synth_base + 'orientation/{:02d}/anchors.npy'.format(model_id))
 
     dp = get_dataset_params('hinterstoisser')
     gt_path = dp['scene_gt_mpath'].format(model_id)
@@ -56,37 +50,10 @@ for model_id in model_ids:
         images_origin.append(np.array([u_center - dim // 2, v_center - dim // 2]))
 
     model = CNN()
-    model.load_state_dict(torch.load('models_anchor27/model_epoch717_loss_0.001009_val_0.018631.pth'))
     model.cuda()
     model.eval()
 
-
-    '''
-    bgs = getBackgrounds(100)
-    render_base = synth_base + 'orientation/{:02d}/render/'.format(model_id)
-    def getSyntheticData(path, with_info):
-        images = []
-        images_info = []
-        filenames = sorted(os.listdir(path))[:100]
-        for filename in tqdm(filenames, 'Reading synthetic'):
-            ext = os.path.splitext(filename)[1]
-            if ext == '.png':
-                images.append(np.asarray(Image.open(path + filename)))
-            if ext == '.json':
-                images_info.append(json.load(open(path + filename, 'r')))
-        if with_info:
-            return images, images_info
-        else:
-            return images
-    images, images_info = getSyntheticData(render_base, True)
-    images = [cv2.cvtColor(image, cv2.COLOR_RGBA2BGRA) for image in images]
-    images = np.array(images)
-    images = [randomPaste(image, bgs) for image in images]
-    '''
-
-
     visualize = True
-
 
     ae_sum = 0.
     re_sum = 0.
@@ -94,7 +61,7 @@ for model_id in model_ids:
     eff_cnt = 0
     for i, img in enumerate(images):
         img0 = img.copy()
-        objectPts = pivots
+        objectPts = anchors
         x = np.transpose(np.array([img]).astype(np.float), (0, 3, 1, 2)) / 255
         x = Variable(torch.FloatTensor(x)).cuda()
 
@@ -102,18 +69,18 @@ for model_id in model_ids:
         imagePts = np.reshape(output, (-1, 2))
 
         if visualize:
-            pivots_vis = np.zeros((96, 96, 3)).astype(np.float32)
+            anchors_vis = np.zeros((96, 96, 3)).astype(np.float32)
             for pi, p in enumerate(imagePts):
                 u = int(p[0])
                 v = int(p[1])
                 if 0 <= u < 96 and 0 <= v < 96:
-                    if 0 <= pi < pivot_step ** 2:
-                        pivots_vis[v][u] = np.array([1.0, 1.0, 0.0])
-                    if pivot_step ** 2 <= pi < 2 * pivot_step ** 2:
-                        pivots_vis[v][u] = np.array([0.0, 1.0, 1.0])
-                    if 2 * pivot_step ** 2 <= pi < 3 * pivot_step ** 2:
-                        pivots_vis[v][u] = np.array([1.0, 0.0, 1.0])
-            cv2.imshow('pivots', pivots_vis)
+                    if 0 <= pi < anchor_step ** 2:
+                        anchors_vis[v][u] = np.array([1.0, 1.0, 0.0])
+                    if anchor_step ** 2 <= pi < 2 * anchor_step ** 2:
+                        anchors_vis[v][u] = np.array([0.0, 1.0, 1.0])
+                    if 2 * anchor_step ** 2 <= pi < 3 * anchor_step ** 2:
+                        anchors_vis[v][u] = np.array([1.0, 0.0, 1.0])
+            cv2.imshow('anchors', anchors_vis)
 
         imagePts = imagePts * ratios[i] + np.array(images_origin[i])
 
@@ -126,8 +93,7 @@ for model_id in model_ids:
         R_gt = np.array(gt[i][0]['cam_R_m2c']).reshape((3, 3))
         t_gt = np.array(gt[i][0]['cam_t_m2c'])
 
-        # ae = pose_error.add(R, t, R_gt, t_gt, obj_model)
-        ae = 0
+        ae = pose_error.add(R, t, R_gt, t_gt, obj_model)
         re = pose_error.re(R, R_gt)
         te = pose_error.te(t, t_gt)
         pe = pose_error.reproj(K, R, t, R_gt, t_gt, obj_model)
@@ -136,7 +102,6 @@ for model_id in model_ids:
 
         if visualize:
             img = renderer.render(obj_model, (img_w, img_h), K, R, t, mode='rgb')
-            # img = mergeImage(cv2.cvtColor(img, cv2.COLOR_RGBA2BGRA), images0[i])
 
             bb = getBoundingBox(img)
             u_center = (bb[0] + bb[2]) // 2
@@ -146,14 +111,13 @@ for model_id in model_ids:
             model_img = img[v_center - dim // 2: v_center + dim // 2,
                         u_center - dim // 2: u_center + dim // 2]
 
-            cv2.imshow('', img0)
-            # cv2.imshow('??', np.asarray(img))
-            cv2.imshow('m', cv2.resize(cv2.cvtColor(model_img, cv2.COLOR_RGBA2BGRA), (96, 96)))
+            cv2.imshow('test', img0)
+            cv2.imshow('model', cv2.resize(cv2.cvtColor(model_img, cv2.COLOR_RGBA2BGRA), (96, 96)))
             cv2.waitKey()
 
         if pe < 5:
             eff_cnt += 1
-            # ae_sum += ae
+            ae_sum += ae
             re_sum += re
             te_sum += te
 

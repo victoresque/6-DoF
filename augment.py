@@ -1,5 +1,5 @@
-import imgaug
 from imgaug import augmenters as iaa
+
 
 seq_affine = iaa.Sequential([
     iaa.Affine(translate_px=(-2, 2),
@@ -14,10 +14,6 @@ seq_color = iaa.Sequential([
     iaa.AddToHueAndSaturation((-32, 32), channels=[0]),
     iaa.AddToHueAndSaturation((-16, -16), channels=[1]),
     iaa.Multiply((0.5, 1.3)),
-])
-
-seq_brighten = iaa.Sequential([
-    iaa.Multiply((1.4, 1.4))
 ])
 
 seq = iaa.Sequential([
